@@ -67,6 +67,16 @@ interface Filters {
     concreteClass: string[];
 }
 
+// Data structure for session export/import
+interface SessionData {
+    version: string;
+    originalData: ParsedXmlData;
+    filters: Filters;
+    stagedFilters: Filters;
+    releasedPieces: string[]; // Set is not serializable, so we use an array
+    fileInfoText: string;
+}
+
 // --- HELPER FUNCTIONS ---
 const getElementTextContent = (element: Element, tagName: string): string => {
     return element.querySelector(tagName)?.textContent?.trim() || 'N/A';
@@ -234,35 +244,104 @@ const App = () => {
 
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files ? Array.from(event.target.files) : [];
-        if (files.length > 0) {
-            const validFiles = files.filter(file => file.type === 'text/xml' || file.name.endsWith('.xml'));
-            
-            if (validFiles.length !== files.length) {
-                 setError('Alguns arquivos não são .xml e foram ignorados.');
-            } else {
-                setError('');
+        // FIX: Explicitly cast to File[] to handle environments where type inference for FileList is incorrect.
+        const files = (event.target.files ? Array.from(event.target.files) : []) as File[];
+        if (files.length === 0) return;
+
+        const xmlFiles = files.filter(file => file.type === 'text/xml' || file.name.endsWith('.xml'));
+        const jsonFiles = files.filter(file => file.type === 'application/json' || file.name.endsWith('.json'));
+
+        setError('');
+        let validFiles: File[] = [];
+        let infoText = '';
+
+        if (jsonFiles.length > 0) {
+            if (files.length > 1) {
+                setError('Por favor, carregue apenas um arquivo de sessão (.json) de cada vez.');
+                event.target.value = '';
+                return;
             }
-            
-            setSelectedFiles(validFiles);
-            setOriginalData(null);
-            setDisplayedData(null);
-            
+            validFiles = jsonFiles;
+            infoText = validFiles[0].name;
+        } else if (xmlFiles.length > 0) {
+            if (xmlFiles.length !== files.length) {
+                setError('Alguns arquivos não são .xml e foram ignorados.');
+            }
+            validFiles = xmlFiles;
             if (validFiles.length === 1) {
-                setFileInfoText(validFiles[0].name);
-            } else if (validFiles.length > 1) {
-                setFileInfoText(`${validFiles.length} arquivos selecionados`);
+                infoText = validFiles[0].name;
             } else {
-                setFileInfoText('');
-                if (files.length > 0) event.target.value = '';
+                infoText = `${validFiles.length} arquivos selecionados`;
             }
+        } else {
+            setError('Nenhum arquivo .xml ou .json válido foi selecionado.');
+            event.target.value = '';
+            return;
         }
+
+        setSelectedFiles(validFiles);
+        setFileInfoText(infoText);
+        setOriginalData(null);
+        setDisplayedData(null);
     };
+
+    const processXmlFiles = async () => {
+        const fileReadPromises = selectedFiles.map(file => {
+            return new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target?.result as string);
+                reader.onerror = () => reject(new Error(`Falha ao ler o arquivo: ${file.name}`));
+                reader.readAsText(file, 'ISO-8859-1');
+            });
+        });
+
+        const xmlStrings = await Promise.all(fileReadPromises);
+
+        let combinedHeader: XmlHeader | null = null;
+        const allPieces: Piece[] = [];
+        const reportNames: string[] = [];
+
+        xmlStrings.forEach((xmlString, index) => {
+            const { header, pieces } = parseSingleXml(xmlString);
+            if (!combinedHeader) {
+                combinedHeader = header;
+            }
+            reportNames.push(header.name);
+            allPieces.push(...pieces);
+        });
+
+        if (!combinedHeader || allPieces.length === 0) {
+            throw new Error('Nenhum dado válido encontrado nos arquivos selecionados.');
+        }
+
+        combinedHeader.name = reportNames.join(', ');
+        
+        const data = { header: combinedHeader, pieces: allPieces };
+        return data;
+    }
+
+    const processJsonFile = async () => {
+        const file = selectedFiles[0];
+        const fileText = await file.text();
+        const sessionData: SessionData = JSON.parse(fileText);
+
+        // Basic validation
+        if (sessionData.version !== '1.0' || !sessionData.originalData) {
+            throw new Error('Arquivo de sessão inválido ou incompatível.');
+        }
+        
+        setFilters(sessionData.filters);
+        setStagedFilters(sessionData.stagedFilters);
+        setReleasedPieces(new Set(sessionData.releasedPieces));
+        setFileInfoText(sessionData.fileInfoText); // Restore original file info
+        
+        return sessionData.originalData;
+    }
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (selectedFiles.length === 0) {
-            setError('Nenhum arquivo XML válido selecionado.');
+            setError('Nenhum arquivo válido selecionado.');
             return;
         }
 
@@ -270,102 +349,78 @@ const App = () => {
         setError('');
         setOriginalData(null);
         setDisplayedData(null);
-        setFilters(initialFilters);
-        setStagedFilters(initialFilters);
-        setReleasedPieces(new Set());
+        // Reset state only if processing XML, not JSON
+        const isJsonImport = selectedFiles.length === 1 && selectedFiles[0].name.endsWith('.json');
+        if (!isJsonImport) {
+            setFilters(initialFilters);
+            setStagedFilters(initialFilters);
+            setReleasedPieces(new Set());
+        }
 
         try {
-            const fileReadPromises = selectedFiles.map(file => {
-                return new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target?.result as string);
-                    reader.onerror = () => reject(new Error(`Falha ao ler o arquivo: ${file.name}`));
-                    reader.readAsText(file, 'ISO-8859-1');
-                });
-            });
+            const dataToProcess = isJsonImport ? await processJsonFile() : await processXmlFiles();
 
-            const xmlStrings = await Promise.all(fileReadPromises);
+            const getUniqueSorted = (key: keyof Piece, numeric: boolean = false) =>
+                [...new Set(dataToProcess.pieces.map(p => String(p[key])))].sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric }));
 
-            let combinedHeader: XmlHeader | null = null;
-            const allPieces: Piece[] = [];
-            const reportNames: string[] = [];
-
-            xmlStrings.forEach((xmlString, index) => {
-                try {
-                    const { header, pieces } = parseSingleXml(xmlString);
-                    if (!combinedHeader) {
-                        combinedHeader = header;
-                    }
-                    reportNames.push(header.name);
-                    allPieces.push(...pieces);
-                } catch (e) {
-                    // FIX: The caught error `e` is of type `unknown`. Safely access the message property by checking if it's an instance of Error.
-                    const message = e instanceof Error ? e.message : String(e);
-                    throw new Error(`[${selectedFiles[index].name}] ${message}`);
-                }
-            });
-
-            if (!combinedHeader || allPieces.length === 0) {
-                throw new Error('Nenhum dado válido encontrado nos arquivos selecionados.');
-            }
-            
-            combinedHeader.name = reportNames.join(', ');
-
-            const getUniqueSorted = (key: keyof Piece, numeric: boolean = false) => 
-                [...new Set(allPieces.map(p => String(p[key])))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric}));
-            
             setAvailableOptions({
                 types: getUniqueSorted('type'),
                 sections: getUniqueSorted('section', true),
                 concreteClasses: getUniqueSorted('concreteClass'),
             });
 
-            let totalPieces = 0;
-            let totalWeight = 0;
-            let totalVolume = 0;
-            let totalLengthWeighted = 0;
-            let maxLength = 0;
-            let maxWeight = 0;
+            let totalPieces = 0, totalWeight = 0, totalVolume = 0, totalLengthWeighted = 0, maxLength = 0, maxWeight = 0;
 
-            allPieces.forEach(p => {
+            dataToProcess.pieces.forEach(p => {
                 const pieceLength = parseSafeFloat(p.length);
                 totalPieces += p.quantity;
                 totalWeight += p.weight * p.quantity;
                 totalVolume += p.volume * p.quantity;
                 totalLengthWeighted += pieceLength * p.quantity;
-                if (p.weight > maxWeight) {
-                    maxWeight = p.weight;
-                }
-                if (pieceLength > maxLength) {
-                    maxLength = pieceLength;
-                }
+                if (p.weight > maxWeight) maxWeight = p.weight;
+                if (pieceLength > maxLength) maxLength = pieceLength;
             });
 
             const avgWeight = totalPieces > 0 ? totalWeight / totalPieces : 0;
             const avgLength = totalPieces > 0 ? totalLengthWeighted / totalPieces : 0;
 
-            const summary: SummaryData = { 
-                totalPieces, 
-                totalWeight, 
-                totalVolume, 
-                avgWeight,
-                maxWeight,
-                avgLength,
-                maxLength
-            };
-            const data = { header: combinedHeader, pieces: allPieces, summary };
-            setOriginalData(data);
-            setDisplayedData(data);
-
+            const summary: SummaryData = { totalPieces, totalWeight, totalVolume, avgWeight, maxWeight, avgLength, maxLength };
+            const fullData = { ...dataToProcess, summary };
+            setOriginalData(fullData);
+            // setDisplayedData is handled by the useEffect hook watching originalData and filters
         } catch (e) {
-            // FIX: The caught error `e` is of type `unknown`. Safely access the message property by checking if it's an instance of Error.
             const message = e instanceof Error ? e.message : String(e);
-            setError(message || 'Ocorreu um erro desconhecido.');
+            setError(`Erro ao processar arquivo: ${message}` || 'Ocorreu um erro desconhecido.');
             setOriginalData(null);
             setDisplayedData(null);
         } finally {
             setIsLoading(false);
         }
+    };
+    
+    const handleExport = () => {
+        if (!originalData) return;
+
+        const sessionData: SessionData = {
+            version: '1.0',
+            originalData,
+            filters,
+            stagedFilters,
+            releasedPieces: Array.from(releasedPieces),
+            fileInfoText,
+        };
+
+        const jsonString = JSON.stringify(sessionData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeFileName = originalData.header.obra.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        a.download = `analise_tekla_${safeFileName || 'sessao'}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
     
     const handleStagedFilterChange = (field: 'name', value: string) => {
@@ -487,14 +542,14 @@ const App = () => {
             <div className="max-w-6xl mx-auto">
                 <header className="text-center mb-10">
                     <h1 className="text-3xl sm:text-4xl font-bold text-text-primary">Analisador de XML - Tekla x Plannix</h1>
-                    <p className="mt-3 text-base sm:text-lg text-text-secondary max-w-3xl mx-auto">Carregue um ou mais arquivos em .xml gerados pelo Tekla para análise</p>
+                    <p className="mt-3 text-base sm:text-lg text-text-secondary max-w-3xl mx-auto">Carregue arquivos .xml do Tekla ou um arquivo de sessão .json para análise</p>
                 </header>
 
                 <div className="bg-surface rounded-xl shadow-md border border-border-default p-6 mb-8 sticky top-4 z-10">
                     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-4">
                         <label className="w-full sm:w-auto flex-grow cursor-pointer bg-surface border border-border-default text-text-secondary font-medium py-3 px-4 rounded-md text-center hover:bg-background transition-colors truncate">
-                            <span>{fileInfoText || 'Selecionar arquivo(s) XML'}</span>
-                            <input type="file" accept=".xml,text/xml" onChange={handleFileChange} className="hidden" aria-label="Selecione os arquivos XML" multiple />
+                            <span>{fileInfoText || 'Selecionar XML ou Sessão (.json)'}</span>
+                            <input type="file" accept=".xml,text/xml,application/json,.json" onChange={handleFileChange} className="hidden" aria-label="Selecione os arquivos XML ou um arquivo de sessão JSON" multiple />
                         </label>
                         <button 
                             type="submit" 
@@ -502,7 +557,7 @@ const App = () => {
                             className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-text font-bold py-3 px-6 rounded-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background disabled:bg-primary/50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transform hover:-translate-y-px"
                         >
                              {isLoading && <svg className="animate-spin -ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                            <span>{isLoading ? 'Processando...' : 'Processar XML'}</span>
+                            <span>{isLoading ? 'Processando...' : 'Processar Arquivo(s)'}</span>
                         </button>
                     </form>
                 </div>
@@ -517,11 +572,23 @@ const App = () => {
                 {displayedData && (
                     <div className="space-y-8 animate-fade-in">
                         <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
-                            <h2 className="text-xl font-bold text-text-primary mb-4">Informações do Projeto</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
-                                <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Obra</span><span className="text-lg text-text-primary mt-1">{displayedData.header.obra}</span></div>
-                                <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Relatório(s)</span><span className="text-lg text-text-primary mt-1">{displayedData.header.name}</span></div>
-                                <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Projetista</span><span className="text-lg text-text-primary mt-1">{displayedData.header.projetista}</span></div>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h2 className="text-xl font-bold text-text-primary mb-4">Informações do Projeto</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+                                        <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Obra</span><span className="text-lg text-text-primary mt-1">{displayedData.header.obra}</span></div>
+                                        <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Relatório(s)</span><span className="text-lg text-text-primary mt-1">{displayedData.header.name}</span></div>
+                                        <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Projetista</span><span className="text-lg text-text-primary mt-1">{displayedData.header.projetista}</span></div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleExport}
+                                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-md transition-colors text-sm flex items-center gap-2 flex-shrink-0"
+                                    title="Salvar sessão atual em um arquivo .json"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    <span>Exportar</span>
+                                </button>
                             </div>
                         </div>
                         
