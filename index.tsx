@@ -59,6 +59,13 @@ interface ParsedXmlData {
     summary: SummaryData;
 }
 
+interface Filters {
+    name: string;
+    type: string[];
+    section: string[];
+    concreteClass: string[];
+}
+
 // --- HELPER FUNCTIONS ---
 const getElementTextContent = (element: Element, tagName: string): string => {
     return element.querySelector(tagName)?.textContent?.trim() || 'N/A';
@@ -148,8 +155,8 @@ const App = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const isDarkMode = useDarkMode();
     
-    const initialFilters = { name: '', type: '', section: '', concreteClass: '' };
-    const [filters, setFilters] = useState(initialFilters);
+    const initialFilters: Filters = { name: '', type: [], section: [], concreteClass: [] };
+    const [filters, setFilters] = useState<Filters>(initialFilters);
     const [availableOptions, setAvailableOptions] = useState({
         types: [] as string[],
         sections: [] as string[],
@@ -162,9 +169,9 @@ const App = () => {
 
         const filteredPieces = originalData.pieces.filter(piece => {
             const nameMatch = filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
-            const typeMatch = filters.type ? piece.type === filters.type : true;
-            const sectionMatch = filters.section ? piece.section === filters.section : true;
-            const concreteClassMatch = filters.concreteClass ? piece.concreteClass === filters.concreteClass : true;
+            const typeMatch = filters.type.length > 0 ? filters.type.includes(piece.type) : true;
+            const sectionMatch = filters.section.length > 0 ? filters.section.includes(piece.section) : true;
+            const concreteClassMatch = filters.concreteClass.length > 0 ? filters.concreteClass.includes(piece.concreteClass) : true;
             return nameMatch && typeMatch && sectionMatch && concreteClassMatch;
         });
 
@@ -216,22 +223,22 @@ const App = () => {
 
         // Available types depend on section and concrete class
         const piecesForType = originalData.pieces.filter(p =>
-            (!section || p.section === section) &&
-            (!concreteClass || p.concreteClass === concreteClass)
+            (section.length === 0 || section.includes(p.section)) &&
+            (concreteClass.length === 0 || concreteClass.includes(p.concreteClass))
         );
         const newTypes = [...new Set(piecesForType.map(p => p.type))].sort();
 
         // Available sections depend on type and concrete class
         const piecesForSection = originalData.pieces.filter(p =>
-            (!type || p.type === type) &&
-            (!concreteClass || p.concreteClass === concreteClass)
+            (type.length === 0 || type.includes(p.type)) &&
+            (concreteClass.length === 0 || concreteClass.includes(p.concreteClass))
         );
         const newSections = [...new Set(piecesForSection.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
 
         // Available concrete classes depend on type and section
         const piecesForConcrete = originalData.pieces.filter(p =>
-            (!type || p.type === type) &&
-            (!section || p.section === section)
+            (type.length === 0 || type.includes(p.type)) &&
+            (section.length === 0 || section.includes(p.section))
         );
         const newConcreteClasses = [...new Set(piecesForConcrete.map(p => p.concreteClass))].sort();
 
@@ -373,7 +380,7 @@ const App = () => {
         }
     };
     
-    const handleFilterChange = (field: keyof typeof filters, value: string) => {
+    const handleFilterChange = (field: keyof Filters, value: string | string[]) => {
         setFilters(prev => ({...prev, [field]: value}));
     };
     
@@ -507,22 +514,19 @@ const App = () => {
                                 </div>
                                 <div>
                                     <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
-                                    <select id="type-filter" value={filters.type} onChange={e => handleFilterChange('type', e.target.value)} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="">Todos</option>
+                                    <select id="type-filter" multiple value={filters.type} onChange={e => handleFilterChange('type', Array.from(e.target.selectedOptions, option => option.value))} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 h-32">
                                         {availableOptions.types.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label htmlFor="section-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seção</label>
-                                    <select id="section-filter" value={filters.section} onChange={e => handleFilterChange('section', e.target.value)} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="">Todas</option>
+                                    <select id="section-filter" multiple value={filters.section} onChange={e => handleFilterChange('section', Array.from(e.target.selectedOptions, option => option.value))} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 h-32">
                                          {availableOptions.sections.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label htmlFor="concrete-class-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Concreto</label>
-                                    <select id="concrete-class-filter" value={filters.concreteClass} onChange={e => handleFilterChange('concreteClass', e.target.value)} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="">Todas</option>
+                                    <select id="concrete-class-filter" multiple value={filters.concreteClass} onChange={e => handleFilterChange('concreteClass', Array.from(e.target.selectedOptions, option => option.value))} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 h-32">
                                         {availableOptions.concreteClasses.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
@@ -530,6 +534,9 @@ const App = () => {
                                     <button onClick={() => setFilters(initialFilters)} className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors h-full mt-auto text-sm">Limpar</button>
                                 </div>
                             </div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center lg:text-left">
+                                Dica: Segure Ctrl (ou Cmd em Mac) para selecionar múltiplos itens nas listas.
+                            </p>
                         </div>
 
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
