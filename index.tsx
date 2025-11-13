@@ -24,6 +24,10 @@ interface SummaryData {
     totalPieces: number;
     totalWeight: number;
     totalVolume: number;
+    avgWeight: number;
+    maxWeight: number;
+    avgLength: number;
+    maxLength: number;
 }
 
 interface ParsedXmlData {
@@ -122,16 +126,39 @@ const App = () => {
         let totalPieces = 0;
         let totalWeight = 0;
         let totalVolume = 0;
+        let totalLengthWeighted = 0;
+        let maxLength = 0;
+        let maxWeight = 0;
+
         filteredPieces.forEach(p => {
+            const pieceLength = parseSafeFloat(p.length);
             totalPieces += p.quantity;
             totalWeight += p.weight * p.quantity;
             totalVolume += p.volume * p.quantity;
+            totalLengthWeighted += pieceLength * p.quantity;
+            if (p.weight > maxWeight) {
+                maxWeight = p.weight;
+            }
+            if (pieceLength > maxLength) {
+                maxLength = pieceLength;
+            }
         });
+
+        const avgWeight = totalPieces > 0 ? totalWeight / totalPieces : 0;
+        const avgLength = totalPieces > 0 ? totalLengthWeighted / totalPieces : 0;
 
         setDisplayedData({
             header: originalData.header,
             pieces: filteredPieces,
-            summary: { totalPieces, totalWeight, totalVolume }
+            summary: { 
+                totalPieces, 
+                totalWeight, 
+                totalVolume, 
+                avgWeight, 
+                maxWeight, 
+                avgLength, 
+                maxLength 
+            }
         });
 
     }, [filters, originalData]);
@@ -258,14 +285,36 @@ const App = () => {
             let totalPieces = 0;
             let totalWeight = 0;
             let totalVolume = 0;
+            let totalLengthWeighted = 0;
+            let maxLength = 0;
+            let maxWeight = 0;
 
             allPieces.forEach(p => {
+                const pieceLength = parseSafeFloat(p.length);
                 totalPieces += p.quantity;
                 totalWeight += p.weight * p.quantity;
                 totalVolume += p.volume * p.quantity;
+                totalLengthWeighted += pieceLength * p.quantity;
+                if (p.weight > maxWeight) {
+                    maxWeight = p.weight;
+                }
+                if (pieceLength > maxLength) {
+                    maxLength = pieceLength;
+                }
             });
 
-            const summary: SummaryData = { totalPieces, totalWeight, totalVolume };
+            const avgWeight = totalPieces > 0 ? totalWeight / totalPieces : 0;
+            const avgLength = totalPieces > 0 ? totalLengthWeighted / totalPieces : 0;
+
+            const summary: SummaryData = { 
+                totalPieces, 
+                totalWeight, 
+                totalVolume, 
+                avgWeight,
+                maxWeight,
+                avgLength,
+                maxLength
+            };
             const data = { header: combinedHeader, pieces: allPieces, summary };
             setOriginalData(data);
             setDisplayedData(data);
@@ -380,7 +429,7 @@ const App = () => {
                                             <th scope="col" className="px-6 py-3">Tipo</th>
                                             <th scope="col" className="px-6 py-3 text-center">Qtd.</th>
                                             <th scope="col" className="px-6 py-3">Seção</th>
-                                            <th scope="col" className="px-6 py-3">Comprimento</th>
+                                            <th scope="col" className="px-6 py-3 text-right">Comprimento (m)</th>
                                             <th scope="col" className="px-6 py-3 text-right">Peso (kg)</th>
                                             <th scope="col" className="px-6 py-3 text-right">Volume (m³)</th>
                                             <th scope="col" className="px-6 py-3">Concreto</th>
@@ -393,7 +442,7 @@ const App = () => {
                                                 <td className="px-6 py-4">{piece.type}</td>
                                                 <td className="px-6 py-4 text-center">{piece.quantity}</td>
                                                 <td className="px-6 py-4">{piece.section}</td>
-                                                <td className="px-6 py-4">{piece.length}</td>
+                                                <td className="px-6 py-4 text-right">{formatNumber(parseSafeFloat(piece.length) / 100, {minimumFractionDigits: 2})}</td>
                                                 <td className="px-6 py-4 text-right">{formatNumber(piece.weight, {minimumFractionDigits: 2})}</td>
                                                 <td className="px-6 py-4 text-right">{formatNumber(piece.volume, {minimumFractionDigits: 4})}</td>
                                                 <td className="px-6 py-4">{piece.concreteClass}</td>
@@ -406,7 +455,7 @@ const App = () => {
 
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
                             <h2 className="text-2xl font-semibold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Resumo (Filtrado)</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
                                <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                                    <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nº Total de Peças</p>
                                    <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.totalPieces)}</p>
@@ -418,6 +467,22 @@ const App = () => {
                                <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
                                    <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Volume Total (m³)</p>
                                    <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.totalVolume, {minimumFractionDigits: 4, maximumFractionDigits: 4})}</p>
+                               </div>
+                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Peso Médio (kg)</p>
+                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.avgWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                               </div>
+                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Peso Máximo (kg)</p>
+                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.maxWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                               </div>
+                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Compr. Médio (m)</p>
+                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.avgLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                               </div>
+                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Compr. Máximo (m)</p>
+                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.maxLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                                </div>
                             </div>
                         </div>
