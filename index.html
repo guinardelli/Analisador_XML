@@ -1,29 +1,50 @@
 
 <!DOCTYPE html>
-<html lang="pt-BR" class="dark">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analisador de XML - Tekla x Plannix</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                DEFAULT: '#fcc200', // Amarelo Marna
+                hover: '#e3af00',   // Amarelo Marna (Hover)
+                text: '#111827',    // Texto para contraste em botões primários
+              },
+              background: '#f3f4f6',   // Fundo principal da página (cinza claro)
+              surface: '#ffffff',      // Fundo de cards e painéis (branco)
+              'text-primary': '#111827',    // Texto principal (preto suave)
+              'text-secondary': '#4b5563', // Texto secundário (cinza escuro)
+              'text-subtle': '#6b7281',     // Texto sutil (cinza médio)
+              'border-default': '#e5e7eb', // Bordas de inputs e divisórias
+            }
+          }
+        }
+      }
+    </script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Custom scrollbar for better dark mode aesthetics */
+        /* Custom scrollbar for light theme aesthetics */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #1f2937; /* gray-800 */
+            background: #f3f4f6; /* background */
         }
         ::-webkit-scrollbar-thumb {
-            background: #4b5563; /* gray-600 */
+            background: #d1d5db; /* gray-300 */
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; /* gray-500 */
+            background: #9ca3af; /* gray-400 */
         }
         /* Simple fade-in animation */
         @keyframes fadeIn {
@@ -48,7 +69,7 @@
 }
 </script>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen antialiased">
+<body class="bg-background text-text-primary min-h-screen antialiased">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

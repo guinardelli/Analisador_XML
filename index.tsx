@@ -77,27 +77,6 @@ const parseSafeFloat = (value: string): number => {
     return parseFloat(value.replace(',', '.')) || 0;
 };
 
-// Custom hook to detect dark mode for chart styling
-const useDarkMode = () => {
-    const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
-
-    useEffect(() => {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    setIsDarkMode(document.documentElement.classList.contains('dark'));
-                }
-            });
-        });
-
-        observer.observe(document.documentElement, { attributes: true });
-
-        return () => observer.disconnect();
-    }, []);
-
-    return isDarkMode;
-};
-
 // --- PARSING LOGIC ---
 const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: Piece[] } => {
     const parser = new DOMParser();
@@ -153,10 +132,11 @@ const App = () => {
     const [displayedData, setDisplayedData] = useState<ParsedXmlData | null>(null);
     const [error, setError] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const isDarkMode = useDarkMode();
     
     const initialFilters: Filters = { name: '', type: [], section: [], concreteClass: [] };
-    const [filters, setFilters] = useState<Filters>(initialFilters);
+    const [filters, setFilters] = useState<Filters>(initialFilters); // Applied filters
+    const [stagedFilters, setStagedFilters] = useState<Filters>(initialFilters); // UI selections
+    
     const [availableOptions, setAvailableOptions] = useState({
         types: [] as string[],
         sections: [] as string[],
@@ -219,7 +199,7 @@ const App = () => {
     useEffect(() => {
         if (!originalData) return;
 
-        const { type, section, concreteClass } = filters;
+        const { type, section, concreteClass } = stagedFilters;
 
         // Available types depend on section and concrete class
         const piecesForType = originalData.pieces.filter(p =>
@@ -248,7 +228,7 @@ const App = () => {
             concreteClasses: newConcreteClasses,
         });
 
-    }, [filters, originalData]);
+    }, [stagedFilters, originalData]);
 
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,6 +269,7 @@ const App = () => {
         setOriginalData(null);
         setDisplayedData(null);
         setFilters(initialFilters);
+        setStagedFilters(initialFilters);
 
         try {
             const fileReadPromises = selectedFiles.map(file => {
@@ -314,8 +295,10 @@ const App = () => {
                     }
                     reportNames.push(header.name);
                     allPieces.push(...pieces);
-                } catch (e: any) {
-                    throw new Error(`[${selectedFiles[index].name}] ${e.message}`);
+                } catch (e) {
+                    // FIX: Catch variable 'e' is of type 'unknown' in strict mode. Must check type before accessing properties.
+                    const message = e instanceof Error ? e.message : String(e);
+                    throw new Error(`[${selectedFiles[index].name}] ${message}`);
                 }
             });
 
@@ -371,8 +354,10 @@ const App = () => {
             setOriginalData(data);
             setDisplayedData(data);
 
-        } catch (e: any) {
-            setError(e.message || 'Ocorreu um erro desconhecido.');
+        } catch (e) {
+            // FIX: Catch variable 'e' is of type 'unknown' in strict mode. Must check type before accessing properties.
+            const message = e instanceof Error ? e.message : String(e);
+            setError(message || 'Ocorreu um erro desconhecido.');
             setOriginalData(null);
             setDisplayedData(null);
         } finally {
@@ -380,16 +365,35 @@ const App = () => {
         }
     };
     
-    const handleFilterChange = (field: keyof Filters, value: string | string[]) => {
-        setFilters(prev => ({...prev, [field]: value}));
+    const handleStagedFilterChange = (field: 'name', value: string) => {
+        setStagedFilters(prev => ({...prev, [field]: value}));
+    };
+
+    const handleStagedCheckboxChange = (field: 'type' | 'section' | 'concreteClass', value: string) => {
+        setStagedFilters(prev => {
+            const currentValues = prev[field];
+            const newValues = currentValues.includes(value)
+                ? currentValues.filter(v => v !== value)
+                : [...currentValues, value];
+            return {...prev, [field]: newValues};
+        });
     };
     
+    const handleApplyFilters = () => {
+        setFilters(stagedFilters);
+    };
+
+    const handleClearFilters = () => {
+        setFilters(initialFilters);
+        setStagedFilters(initialFilters);
+    };
+
     const formatNumber = (num: number, options?: Intl.NumberFormatOptions) => {
         return num.toLocaleString('pt-BR', options);
     }
 
     // --- CHART DATA AND OPTIONS ---
-    const chartColors = ['#4F46E5', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#D946EF', '#06B6D4'];
+    const chartColors = ['#fcc200', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#D946EF', '#06B6D4'];
 
     const quantityByTypeData = useMemo(() => {
         if (!displayedData) return null;
@@ -398,7 +402,8 @@ const App = () => {
             return acc;
         }, {} as Record<string, number>);
 
-        const sortedEntries = Object.entries(typeCounts).sort(([,a],[,b]) => b - a);
+        // FIX: Explicitly cast sorting values to numbers to prevent type inference issues with arithmetic operations.
+        const sortedEntries = Object.entries(typeCounts).sort(([,a],[,b]) => Number(b) - Number(a));
         const labels = sortedEntries.map(([key]) => key);
         const data = sortedEntries.map(([,value]) => value);
 
@@ -408,11 +413,11 @@ const App = () => {
                 label: 'Quantidade',
                 data,
                 backgroundColor: chartColors,
-                borderColor: isDarkMode ? '#1f2937' : '#ffffff',
+                borderColor: '#ffffff',
                 borderWidth: 2,
             }]
         };
-    }, [displayedData, isDarkMode]);
+    }, [displayedData]);
 
     const heaviestPartsData = useMemo(() => {
         if (!displayedData) return null;
@@ -425,16 +430,16 @@ const App = () => {
             datasets: [{
                 label: 'Peso (kg)',
                 data: top10Heaviest.map(p => p.weight),
-                backgroundColor: '#4F46E5',
-                borderColor: '#3c34c4',
+                backgroundColor: '#fcc200', // primary
+                borderColor: '#e3af00',   // primary-hover
                 borderWidth: 1,
             }]
         };
     }, [displayedData]);
     
     const chartOptions = useMemo(() => {
-        const textColor = isDarkMode ? 'rgba(229, 231, 235, 0.9)' : 'rgba(55, 65, 81, 0.9)';
-        const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        const textColor = '#4b5563'; // text-secondary
+        const gridColor = 'rgba(0, 0, 0, 0.05)';
         
         return {
             responsive: true,
@@ -445,7 +450,7 @@ const App = () => {
                 },
                 title: {
                     display: true,
-                    color: textColor,
+                    color: '#111827', // text-primary
                     font: { size: 16 }
                 }
             },
@@ -460,95 +465,146 @@ const App = () => {
                 }
             }
         };
-    }, [isDarkMode]);
+    }, []);
 
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-4xl mx-auto">
                 <header className="text-center mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white">Analisador de XML - Tekla x Plannix</h1>
-                    <p className="mt-2 text-gray-600 dark:text-gray-400">Carregue um ou mais arquivos em .xml gerados pelo Tekla para análise</p>
+                    <h1 className="text-4xl font-bold text-text-primary">Analisador de XML - Tekla x Plannix</h1>
+                    <p className="mt-2 text-lg text-text-secondary">Carregue um ou mais arquivos em .xml gerados pelo Tekla para análise</p>
                 </header>
 
-                <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8 sticky top-4 z-10">
+                <div className="bg-surface rounded-lg shadow-lg border border-border-default p-6 mb-8 sticky top-4 z-10">
                     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-4">
-                        <label className="w-full sm:w-auto flex-grow cursor-pointer bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium py-2 px-4 rounded-lg text-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors truncate">
+                        <label className="w-full sm:w-auto flex-grow cursor-pointer bg-gray-100 text-text-secondary font-medium py-2 px-4 rounded-md text-center hover:bg-gray-200 transition-colors truncate">
                             <span>{fileInfoText || 'Selecionar arquivo(s) XML'}</span>
                             <input type="file" accept=".xml,text/xml" onChange={handleFileChange} className="hidden" aria-label="Selecione os arquivos XML" multiple />
                         </label>
                         <button 
                             type="submit" 
                             disabled={selectedFiles.length === 0 || isLoading}
-                            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 dark:disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-bold py-2 px-6 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 flex items-center justify-center space-x-2"
+                            className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-text font-bold py-2 px-6 rounded-md shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:bg-primary/50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                         >
-                             {isLoading && <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                             {isLoading && <svg className="animate-spin -ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
                             <span>{isLoading ? 'Processando...' : 'Processar XML'}</span>
                         </button>
                     </form>
                 </div>
 
                 {error && (
-                    <div className="bg-red-100 dark:bg-red-900/50 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg relative mb-8" role="alert">
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-8" role="alert">
                         <strong className="font-bold">Erro: </strong>
                         <span className="block sm:inline">{error}</span>
                     </div>
                 )}
 
                 {displayedData && (
-                    <div className="space-y-8 animate-fade-in">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
-                            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Informações do Projeto</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-                                <div><strong>Obra:</strong> <span className="text-gray-600 dark:text-gray-300">{displayedData.header.obra}</span></div>
-                                <div><strong>Relatório:</strong> <span className="text-gray-600 dark:text-gray-300">{displayedData.header.name}</span></div>
-                                <div><strong>Projetista:</strong> <span className="text-gray-600 dark:text-gray-300">{displayedData.header.projetista}</span></div>
+                    <div className="space-y-6 animate-fade-in">
+                        <div className="bg-surface rounded-lg shadow-lg border border-border-default p-6">
+                            <h2 className="text-2xl font-semibold text-text-primary mb-4">Informações do Projeto</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 text-base">
+                                <div><strong className="text-text-secondary">Obra:</strong> <span className="text-text-subtle">{displayedData.header.obra}</span></div>
+                                <div><strong className="text-text-secondary">Relatório:</strong> <span className="text-text-subtle">{displayedData.header.name}</span></div>
+                                <div><strong className="text-text-secondary">Projetista:</strong> <span className="text-text-subtle">{displayedData.header.projetista}</span></div>
                             </div>
                         </div>
                         
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
-                            <h2 className="text-2xl font-semibold mb-4">Filtros</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
-                                <div className="lg:col-span-2">
-                                    <label htmlFor="name-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome da Peça</label>
-                                    <input type="text" id="name-filter" value={filters.name} onChange={e => handleFilterChange('name', e.target.value)} placeholder="Buscar por nome..." className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"/>
-                                </div>
+                        <div className="bg-surface rounded-lg shadow-lg border border-border-default p-6">
+                            <h2 className="text-2xl font-semibold text-text-primary mb-6">Filtros</h2>
+                            <div className="flex flex-col gap-6">
                                 <div>
-                                    <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
-                                    <select id="type-filter" multiple value={filters.type} onChange={e => handleFilterChange('type', Array.from(e.target.selectedOptions, option => option.value))} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 h-32">
-                                        {availableOptions.types.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                    </select>
+                                    <label htmlFor="name-filter" className="block text-sm font-medium text-text-secondary mb-1">Nome da Peça</label>
+                                    <input type="text" id="name-filter" value={stagedFilters.name} onChange={e => handleStagedFilterChange('name', e.target.value)} placeholder="Buscar por nome..." className="w-full bg-surface border border-border-default rounded-md p-2 text-sm focus:ring-primary focus:border-primary"/>
                                 </div>
-                                <div>
-                                    <label htmlFor="section-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seção</label>
-                                    <select id="section-filter" multiple value={filters.section} onChange={e => handleFilterChange('section', Array.from(e.target.selectedOptions, option => option.value))} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 h-32">
-                                         {availableOptions.sections.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                    </select>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {[
+                                        { id: 'type', label: 'Tipo', options: availableOptions.types, selected: stagedFilters.type },
+                                        { id: 'section', label: 'Seção', options: availableOptions.sections, selected: stagedFilters.section },
+                                        { id: 'concreteClass', label: 'Concreto', options: availableOptions.concreteClasses, selected: stagedFilters.concreteClass }
+                                    ].map(group => (
+                                        <div key={group.id}>
+                                            <label className="block text-sm font-medium text-text-secondary mb-1">
+                                                {group.label} {group.selected.length > 0 && `(${group.selected.length} selecionado${group.selected.length > 1 ? 's' : ''})`}
+                                            </label>
+                                            <div className="h-32 overflow-y-auto p-2 border border-border-default rounded-lg bg-gray-50 space-y-2">
+                                                {group.options.map(opt => (
+                                                    <label key={opt} htmlFor={`${group.id}-${opt}`} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-primary-hover">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`${group.id}-${opt}`}
+                                                            checked={group.selected.includes(opt)}
+                                                            onChange={() => handleStagedCheckboxChange(group.id as 'type' | 'section' | 'concreteClass', opt)}
+                                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                        />
+                                                        <span>{opt}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div>
-                                    <label htmlFor="concrete-class-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Concreto</label>
-                                    <select id="concrete-class-filter" multiple value={filters.concreteClass} onChange={e => handleFilterChange('concreteClass', Array.from(e.target.selectedOptions, option => option.value))} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 h-32">
-                                        {availableOptions.concreteClasses.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <button onClick={() => setFilters(initialFilters)} className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors h-full mt-auto text-sm">Limpar</button>
+                                
+                                <div className="flex justify-end pt-4 mt-2 border-t border-border-default">
+                                    <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
+                                        <button onClick={handleClearFilters} className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-md transition-colors text-sm">
+                                            Limpar Filtros
+                                        </button>
+                                        <button onClick={handleApplyFilters} className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-text font-bold py-2 px-4 rounded-md shadow-md transition-colors text-sm">
+                                            Aplicar Filtros
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center lg:text-left">
-                                Dica: Segure Ctrl (ou Cmd em Mac) para selecionar múltiplos itens nas listas.
-                            </p>
                         </div>
 
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div className="bg-surface rounded-lg shadow-lg border border-border-default overflow-hidden">
                              <div className="p-6">
-                                <h2 className="text-2xl font-semibold">Detalhamento das Peças</h2>
-                                {originalData && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    Exibindo {displayedData.pieces.length} de {originalData.pieces.length} peças.
+                                <h2 className="text-2xl font-semibold text-text-primary">Resumo (Filtrado)</h2>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center mt-4">
+                                   <div className="p-4 bg-background rounded-lg">
+                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Nº Total de Peças</p>
+                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalPieces)}</p>
+                                   </div>
+                                   <div className="p-4 bg-background rounded-lg">
+                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Peso Total (kg)</p>
+                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                   </div>
+                                   <div className="p-4 bg-background rounded-lg">
+                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Volume Total (m³)</p>
+                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalVolume, {minimumFractionDigits: 4, maximumFractionDigits: 4})}</p>
+                                   </div>
+                                   <div className="p-4 bg-background rounded-lg">
+                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Peso Médio (kg)</p>
+                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.avgWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                   </div>
+                                   <div className="p-4 bg-background rounded-lg">
+                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Peso Máximo (kg)</p>
+                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.maxWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                   </div>
+                                   <div className="p-4 bg-background rounded-lg">
+                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Compr. Médio (m)</p>
+                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.avgLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                   </div>
+                                   <div className="p-4 bg-background rounded-lg">
+                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Compr. Máximo (m)</p>
+                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.maxLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                   </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-surface rounded-lg shadow-lg border border-border-default overflow-hidden">
+                             <div className="p-6">
+                                <h2 className="text-2xl font-semibold text-text-primary">Detalhamento das Peças</h2>
+                                {originalData && <p className="text-sm text-text-subtle mt-1">
+                                    Exibindo {displayedData.pieces.length} de {originalData.pieces.length} peças ({formatNumber(displayedData.summary.totalPieces)} no total).
                                 </p>}
                             </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700/50 dark:text-gray-300">
+                                <table className="w-full text-sm text-left text-text-secondary">
+                                    <thead className="text-xs text-text-secondary uppercase bg-gray-50">
                                         <tr>
                                             <th scope="col" className="px-6 py-3">Nome</th>
                                             <th scope="col" className="px-6 py-3">Tipo</th>
@@ -562,8 +618,8 @@ const App = () => {
                                     </thead>
                                     <tbody>
                                         {displayedData.pieces.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true})).map((piece, index) => (
-                                            <tr key={index} className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600/20 transition-colors">
-                                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">{piece.name}</td>
+                                            <tr key={index} className="bg-surface border-b border-border-default hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-text-primary whitespace-nowrap">{piece.name}</td>
                                                 <td className="px-6 py-4">{piece.type}</td>
                                                 <td className="px-6 py-4 text-center">{piece.quantity}</td>
                                                 <td className="px-6 py-4">{piece.section}</td>
@@ -578,42 +634,8 @@ const App = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
-                            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Resumo (Filtrado)</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nº Total de Peças</p>
-                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.totalPieces)}</p>
-                               </div>
-                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Peso Total (kg)</p>
-                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.totalWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                               </div>
-                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Volume Total (m³)</p>
-                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.totalVolume, {minimumFractionDigits: 4, maximumFractionDigits: 4})}</p>
-                               </div>
-                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Peso Médio (kg)</p>
-                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.avgWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                               </div>
-                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Peso Máximo (kg)</p>
-                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.maxWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                               </div>
-                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Compr. Médio (m)</p>
-                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.avgLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                               </div>
-                               <div className="p-4 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
-                                   <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Compr. Máximo (m)</p>
-                                   <p className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">{formatNumber(displayedData.summary.maxLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                               </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
-                            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Visualização de Dados</h2>
+                        <div className="bg-surface rounded-lg shadow-lg border border-border-default p-6">
+                            <h2 className="text-2xl font-semibold text-text-primary mb-4 border-b border-border-default pb-2">Visualização de Dados</h2>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
                                 <div className="min-h-[400px] relative">
                                     {quantityByTypeData && <Pie data={quantityByTypeData} options={{...chartOptions, plugins: {...chartOptions.plugins, title: {...chartOptions.plugins.title, text: 'Distribuição por Tipo de Produto'}}}} />}
