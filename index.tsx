@@ -148,6 +148,7 @@ const App = () => {
     const [filters, setFilters] = useState<Filters>(initialFilters); // Applied filters
     const [stagedFilters, setStagedFilters] = useState<Filters>(initialFilters); // UI selections
     const [releasedPieces, setReleasedPieces] = useState<Set<string>>(new Set());
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Piece | null; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
     
     const [availableOptions, setAvailableOptions] = useState({
         types: [] as string[],
@@ -242,6 +243,33 @@ const App = () => {
 
     }, [stagedFilters, originalData]);
 
+    const sortedPieces = useMemo(() => {
+        if (!displayedData?.pieces) return [];
+        
+        const sortableItems = [...displayedData.pieces];
+        
+        if (sortConfig.key) {
+            sortableItems.sort((a, b) => {
+                const aValue = a[sortConfig.key!];
+                const bValue = b[sortConfig.key!];
+
+                let comparison = 0;
+                
+                if (['quantity', 'weight', 'volume'].includes(sortConfig.key!)) {
+                    comparison = (aValue as number) - (bValue as number);
+                } else if (sortConfig.key === 'length') {
+                     comparison = parseSafeFloat(aValue as string) - parseSafeFloat(bValue as string);
+                } else {
+                    const numericSort = ['name', 'section'].includes(sortConfig.key!);
+                    comparison = String(aValue).localeCompare(String(bValue), undefined, { numeric: numericSort });
+                }
+
+                return sortConfig.direction === 'ascending' ? comparison : -comparison;
+            });
+        }
+        
+        return sortableItems;
+    }, [displayedData?.pieces, sortConfig]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         // FIX: Explicitly cast to File[] to handle environments where type inference for FileList is incorrect.
@@ -458,6 +486,14 @@ const App = () => {
         });
     };
 
+    const handleSort = (key: keyof Piece) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
     const formatNumber = (num: number, options?: Intl.NumberFormatOptions) => {
         return num.toLocaleString('pt-BR', options);
     }
@@ -536,6 +572,28 @@ const App = () => {
             }
         };
     }, []);
+
+    const SortableHeader = ({ label, sortKey, align = 'left' }: { label: string, sortKey: keyof Piece, align?: 'left' | 'center' | 'right' }) => {
+        const isSorted = sortConfig.key === sortKey;
+        const alignmentClasses = {
+            left: 'justify-start',
+            center: 'justify-center',
+            right: 'justify-end'
+        };
+
+        return (
+            <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition-colors group" onClick={() => handleSort(sortKey)}>
+                <div className={`flex items-center ${alignmentClasses[align]}`}>
+                    <span>{label}</span>
+                    {isSorted && (
+                        <span className="text-[10px] ml-1.5">
+                            {sortConfig.direction === 'ascending' ? '▲' : '▼'}
+                        </span>
+                    )}
+                </div>
+            </th>
+        );
+    };
 
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -710,21 +768,21 @@ const App = () => {
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left text-text-secondary">
-                                    <thead className="text-xs text-slate-500 uppercase bg-slate-50">
+                                    <thead className="text-xs text-slate-500 uppercase bg-slate-50 select-none">
                                         <tr>
                                             <th scope="col" className="px-4 py-3"></th>
-                                            <th scope="col" className="px-6 py-3">Nome</th>
-                                            <th scope="col" className="px-6 py-3">Tipo</th>
-                                            <th scope="col" className="px-6 py-3 text-center">Qtd.</th>
-                                            <th scope="col" className="px-6 py-3">Seção</th>
-                                            <th scope="col" className="px-6 py-3 text-right">Comprimento (m)</th>
-                                            <th scope="col" className="px-6 py-3 text-right">Peso (kg)</th>
-                                            <th scope="col" className="px-6 py-3 text-right">Volume (m³)</th>
-                                            <th scope="col" className="px-6 py-3">Concreto</th>
+                                            <SortableHeader label="Nome" sortKey="name" />
+                                            <SortableHeader label="Tipo" sortKey="type" />
+                                            <SortableHeader label="Qtd." sortKey="quantity" align="center" />
+                                            <SortableHeader label="Seção" sortKey="section" />
+                                            <SortableHeader label="Comprimento (m)" sortKey="length" align="right" />
+                                            <SortableHeader label="Peso (kg)" sortKey="weight" align="right" />
+                                            <SortableHeader label="Volume (m³)" sortKey="volume" align="right" />
+                                            <SortableHeader label="Concreto" sortKey="concreteClass" />
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border-default">
-                                        {displayedData.pieces.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true})).map((piece, index) => (
+                                        {sortedPieces.map((piece, index) => (
                                             <tr key={`${piece.name}-${index}`} className={`transition-colors ${releasedPieces.has(piece.name) ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-slate-50/50'}`}>
                                                 <td className="px-4 py-4">
                                                     <input
