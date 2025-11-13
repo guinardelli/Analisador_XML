@@ -1,6 +1,29 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Pie, Bar } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    ArcElement,
+    Tooltip,
+    Legend,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+} from 'chart.js';
+
+// --- CHART.JS REGISTRATION ---
+ChartJS.register(
+    ArcElement,
+    Tooltip,
+    Legend,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title
+);
+
 
 // --- TYPE DEFINITIONS ---
 interface Piece {
@@ -45,6 +68,27 @@ const parseSafeFloat = (value: string): number => {
     if (!value) return 0;
     // Handles both dot and comma decimal separators
     return parseFloat(value.replace(',', '.')) || 0;
+};
+
+// Custom hook to detect dark mode for chart styling
+const useDarkMode = () => {
+    const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+
+    useEffect(() => {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    setIsDarkMode(document.documentElement.classList.contains('dark'));
+                }
+            });
+        });
+
+        observer.observe(document.documentElement, { attributes: true });
+
+        return () => observer.disconnect();
+    }, []);
+
+    return isDarkMode;
 };
 
 // --- PARSING LOGIC ---
@@ -102,6 +146,7 @@ const App = () => {
     const [displayedData, setDisplayedData] = useState<ParsedXmlData | null>(null);
     const [error, setError] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const isDarkMode = useDarkMode();
     
     const initialFilters = { name: '', type: '', section: '', concreteClass: '' };
     const [filters, setFilters] = useState(initialFilters);
@@ -319,7 +364,6 @@ const App = () => {
             setOriginalData(data);
             setDisplayedData(data);
 
-        // FIX: Corrected catch block syntax. The previous syntax `catch (e: any) e {` was invalid.
         } catch (e: any) {
             setError(e.message || 'Ocorreu um erro desconhecido.');
             setOriginalData(null);
@@ -336,6 +380,80 @@ const App = () => {
     const formatNumber = (num: number, options?: Intl.NumberFormatOptions) => {
         return num.toLocaleString('pt-BR', options);
     }
+
+    // --- CHART DATA AND OPTIONS ---
+    const chartColors = ['#4F46E5', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#D946EF', '#06B6D4'];
+
+    const quantityByTypeData = useMemo(() => {
+        if (!displayedData) return null;
+        const typeCounts = displayedData.pieces.reduce((acc, piece) => {
+            acc[piece.type] = (acc[piece.type] || 0) + piece.quantity;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const sortedEntries = Object.entries(typeCounts).sort(([,a],[,b]) => b - a);
+        const labels = sortedEntries.map(([key]) => key);
+        const data = sortedEntries.map(([,value]) => value);
+
+        return {
+            labels,
+            datasets: [{
+                label: 'Quantidade',
+                data,
+                backgroundColor: chartColors,
+                borderColor: isDarkMode ? '#1f2937' : '#ffffff',
+                borderWidth: 2,
+            }]
+        };
+    }, [displayedData, isDarkMode]);
+
+    const heaviestPartsData = useMemo(() => {
+        if (!displayedData) return null;
+        const top10Heaviest = [...displayedData.pieces]
+            .sort((a, b) => b.weight - a.weight)
+            .slice(0, 10);
+        
+        return {
+            labels: top10Heaviest.map(p => p.name),
+            datasets: [{
+                label: 'Peso (kg)',
+                data: top10Heaviest.map(p => p.weight),
+                backgroundColor: '#4F46E5',
+                borderColor: '#3c34c4',
+                borderWidth: 1,
+            }]
+        };
+    }, [displayedData]);
+    
+    const chartOptions = useMemo(() => {
+        const textColor = isDarkMode ? 'rgba(229, 231, 235, 0.9)' : 'rgba(55, 65, 81, 0.9)';
+        const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: textColor }
+                },
+                title: {
+                    display: true,
+                    color: textColor,
+                    font: { size: 16 }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                y: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            }
+        };
+    }, [isDarkMode]);
 
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -486,6 +604,22 @@ const App = () => {
                                </div>
                             </div>
                         </div>
+
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
+                            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">Visualização de Dados</h2>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+                                <div className="min-h-[400px] relative">
+                                    {quantityByTypeData && <Pie data={quantityByTypeData} options={{...chartOptions, plugins: {...chartOptions.plugins, title: {...chartOptions.plugins.title, text: 'Distribuição por Tipo de Produto'}}}} />}
+                                </div>
+                                <div className="min-h-[400px] relative">
+                                    {quantityByTypeData && <Bar data={quantityByTypeData} options={{...chartOptions, plugins: {...chartOptions.plugins, legend: {display: false}, title: {...chartOptions.plugins.title, text: 'Quantidade de Peças por Tipo'}}}} />}
+                                </div>
+                                <div className="lg:col-span-2 min-h-[400px] relative">
+                                    {heaviestPartsData && <Bar data={heaviestPartsData} options={{...chartOptions, indexAxis: 'y', plugins: {...chartOptions.plugins, legend: {display: false}, title: {...chartOptions.plugins.title, text: 'Top 10 Peças mais Pesadas'}}}} />}
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 )}
             </div>
