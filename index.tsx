@@ -33,7 +33,6 @@ interface ParsedXmlData {
 
 interface FilterOptions {
     types: string[];
-    sections: string[];
     concreteClasses: string[];
 }
 
@@ -106,8 +105,10 @@ const App = () => {
     
     const initialFilters = { name: '', type: '', section: '', concreteClass: '' };
     const [filters, setFilters] = useState(initialFilters);
-    const [filterOptions, setFilterOptions] = useState<FilterOptions>({ types: [], sections: [], concreteClasses: [] });
+    const [filterOptions, setFilterOptions] = useState<FilterOptions>({ types: [], concreteClasses: [] });
+    const [availableSections, setAvailableSections] = useState<string[]>([]);
     
+    // Effect for applying filters to the displayed data
     useEffect(() => {
         if (!originalData) return;
 
@@ -135,6 +136,31 @@ const App = () => {
         });
 
     }, [filters, originalData]);
+    
+    // Effect for updating available sections based on the selected type
+    useEffect(() => {
+        if (!originalData) return;
+
+        let newAvailableSections: string[];
+        if (filters.type) {
+            const sectionsForType = originalData.pieces
+                .filter(p => p.type === filters.type)
+                .map(p => p.section);
+            newAvailableSections = [...new Set(sectionsForType)].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+        } else {
+            // If no type is selected, show all unique sections from the original data
+            newAvailableSections = [...new Set(originalData.pieces.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+        }
+        
+        setAvailableSections(newAvailableSections);
+
+        // If the currently selected section is not valid for the selected type, reset it.
+        if (filters.section && !newAvailableSections.includes(filters.section)) {
+            setFilters(prev => ({...prev, section: ''}));
+        }
+
+    }, [filters.type, originalData]);
+
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files ? Array.from(event.target.files) : [];
@@ -210,13 +236,14 @@ const App = () => {
             
             combinedHeader.name = reportNames.join(', ');
 
-            // FIX: Convert values to strings before calling localeCompare to handle both numbers and strings.
             const getUniqueSorted = (key: keyof Piece) => [...new Set(allPieces.map(p => p[key]))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+            
             setFilterOptions({
                 types: getUniqueSorted('type') as string[],
-                sections: getUniqueSorted('section') as string[],
                 concreteClasses: getUniqueSorted('concreteClass') as string[],
             });
+            // Initially, available sections are all sections
+            setAvailableSections(getUniqueSorted('section') as string[]);
 
             let totalPieces = 0;
             let totalWeight = 0;
@@ -311,7 +338,7 @@ const App = () => {
                                     <label htmlFor="section-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seção</label>
                                     <select id="section-filter" value={filters.section} onChange={e => handleFilterChange('section', e.target.value)} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">Todas</option>
-                                         {filterOptions.sections.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                         {availableSections.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
                                 <div>
