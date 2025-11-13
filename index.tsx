@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Pie, Bar } from 'react-chartjs-2';
@@ -296,7 +297,7 @@ const App = () => {
                     reportNames.push(header.name);
                     allPieces.push(...pieces);
                 } catch (e) {
-                    // Fix: The caught error `e` is of type `unknown`. To prevent runtime errors, check if it's an instance of Error before accessing its properties.
+                    // FIX: The caught error `e` is of type `unknown`. To prevent runtime errors, check if it's an instance of Error before accessing its properties.
                     const message = e instanceof Error ? e.message : String(e);
                     throw new Error(`[${selectedFiles[index].name}] ${message}`);
                 }
@@ -355,7 +356,7 @@ const App = () => {
             setDisplayedData(data);
 
         } catch (e) {
-            // Fix: The caught error `e` is of type `unknown`. To prevent runtime errors, check if it's an instance of Error before accessing its properties.
+            // FIX: The caught error `e` is of type `unknown`. To prevent runtime errors, check if it's an instance of Error before accessing its properties.
             const message = e instanceof Error ? e.message : String(e);
             setError(message || 'Ocorreu um erro desconhecido.');
             setOriginalData(null);
@@ -562,53 +563,59 @@ const App = () => {
                         <div className="bg-surface rounded-xl shadow-md border border-border-default overflow-hidden">
                              <div className="p-6">
                                 <h2 className="text-xl font-bold text-text-primary">Resumo (Filtrado)</h2>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center mt-6">
-                                   <div className="p-4 bg-background rounded-lg">
-                                       <p className="text-xs text-text-subtle uppercase tracking-wider">Nº Peças</p>
-                                       <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalPieces)}</p>
-                                   </div>
-                                   <div className="p-4 bg-background rounded-lg">
-                                       <p className="text-xs text-text-subtle uppercase tracking-wider">Peso Total</p>
-                                       <div className="flex items-baseline justify-center gap-x-1 mt-1">
-                                           <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.totalWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                                           <p className="text-sm font-medium text-text-secondary">kg</p>
+                                <div className="mt-6 flex flex-col gap-4">
+                                    {/* First Row: Totals */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center">
+                                       <div className="p-4 bg-background rounded-lg">
+                                           <p className="text-xs text-text-subtle uppercase tracking-wider">Nº Peças</p>
+                                           <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalPieces)}</p>
                                        </div>
-                                   </div>
-                                   <div className="p-4 bg-background rounded-lg">
-                                       <p className="text-xs text-text-subtle uppercase tracking-wider">Volume Total</p>
-                                       <div className="flex items-baseline justify-center gap-x-1 mt-1">
-                                           <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.totalVolume, {minimumFractionDigits: 4, maximumFractionDigits: 4})}</p>
-                                           <p className="text-sm font-medium text-text-secondary">m³</p>
+                                       <div className="p-4 bg-background rounded-lg">
+                                           <p className="text-xs text-text-subtle uppercase tracking-wider">Peso Total</p>
+                                           <div className="flex items-baseline justify-center gap-x-1 mt-1">
+                                               <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.totalWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                               <p className="text-sm font-medium text-text-secondary">kg</p>
+                                           </div>
                                        </div>
-                                   </div>
-                                   <div className="p-4 bg-background rounded-lg">
-                                       <p className="text-xs text-text-subtle uppercase tracking-wider">Peso Médio</p>
-                                       <div className="flex items-baseline justify-center gap-x-1 mt-1">
-                                           <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.avgWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                                           <p className="text-sm font-medium text-text-secondary">kg</p>
+                                       <div className="p-4 bg-background rounded-lg">
+                                           <p className="text-xs text-text-subtle uppercase tracking-wider">Volume Total</p>
+                                           <div className="flex items-baseline justify-center gap-x-1 mt-1">
+                                               <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.totalVolume, {minimumFractionDigits: 4, maximumFractionDigits: 4})}</p>
+                                               <p className="text-sm font-medium text-text-secondary">m³</p>
+                                           </div>
                                        </div>
-                                   </div>
-                                   <div className="p-4 bg-background rounded-lg">
-                                       <p className="text-xs text-text-subtle uppercase tracking-wider">Peso Máximo</p>
-                                       <div className="flex items-baseline justify-center gap-x-1 mt-1">
-                                           <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.maxWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                                           <p className="text-sm font-medium text-text-secondary">kg</p>
+                                    </div>
+                                    {/* Second Row: Averages & Maximums */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                                       <div className="p-4 bg-background rounded-lg">
+                                           <p className="text-xs text-text-subtle uppercase tracking-wider">Peso Médio</p>
+                                           <div className="flex items-baseline justify-center gap-x-1 mt-1">
+                                               <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.avgWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                               <p className="text-sm font-medium text-text-secondary">kg</p>
+                                           </div>
                                        </div>
-                                   </div>
-                                   <div className="p-4 bg-background rounded-lg">
-                                       <p className="text-xs text-text-subtle uppercase tracking-wider">Compr. Médio</p>
-                                       <div className="flex items-baseline justify-center gap-x-1 mt-1">
-                                           <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.avgLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                                           <p className="text-sm font-medium text-text-secondary">m</p>
+                                       <div className="p-4 bg-background rounded-lg">
+                                           <p className="text-xs text-text-subtle uppercase tracking-wider">Peso Máximo</p>
+                                           <div className="flex items-baseline justify-center gap-x-1 mt-1">
+                                               <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.maxWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                               <p className="text-sm font-medium text-text-secondary">kg</p>
+                                           </div>
                                        </div>
-                                   </div>
-                                   <div className="p-4 bg-background rounded-lg">
-                                       <p className="text-xs text-text-subtle uppercase tracking-wider">Compr. Máximo</p>
-                                       <div className="flex items-baseline justify-center gap-x-1 mt-1">
-                                           <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.maxLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                                           <p className="text-sm font-medium text-text-secondary">m</p>
+                                       <div className="p-4 bg-background rounded-lg">
+                                           <p className="text-xs text-text-subtle uppercase tracking-wider">Compr. Médio</p>
+                                           <div className="flex items-baseline justify-center gap-x-1 mt-1">
+                                               <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.avgLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                               <p className="text-sm font-medium text-text-secondary">m</p>
+                                           </div>
                                        </div>
-                                   </div>
+                                       <div className="p-4 bg-background rounded-lg">
+                                           <p className="text-xs text-text-subtle uppercase tracking-wider">Compr. Máximo</p>
+                                           <div className="flex items-baseline justify-center gap-x-1 mt-1">
+                                               <p className="text-2xl sm:text-3xl font-bold text-text-primary">{formatNumber(displayedData.summary.maxLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                               <p className="text-sm font-medium text-text-secondary">m</p>
+                                           </div>
+                                       </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
