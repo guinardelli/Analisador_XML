@@ -32,11 +32,6 @@ interface ParsedXmlData {
     summary: SummaryData;
 }
 
-interface FilterOptions {
-    types: string[];
-    concreteClasses: string[];
-}
-
 // --- HELPER FUNCTIONS ---
 const getElementTextContent = (element: Element, tagName: string): string => {
     return element.querySelector(tagName)?.textContent?.trim() || 'N/A';
@@ -106,8 +101,11 @@ const App = () => {
     
     const initialFilters = { name: '', type: '', section: '', concreteClass: '' };
     const [filters, setFilters] = useState(initialFilters);
-    const [filterOptions, setFilterOptions] = useState<FilterOptions>({ types: [], concreteClasses: [] });
-    const [availableSections, setAvailableSections] = useState<string[]>([]);
+    const [availableOptions, setAvailableOptions] = useState({
+        types: [] as string[],
+        sections: [] as string[],
+        concreteClasses: [] as string[],
+    });
     
     // Effect for applying filters to the displayed data
     useEffect(() => {
@@ -138,29 +136,40 @@ const App = () => {
 
     }, [filters, originalData]);
     
-    // Effect for updating available sections based on the selected type
+    // Effect for updating available filter options based on other active filters (cascading filters)
     useEffect(() => {
         if (!originalData) return;
 
-        let newAvailableSections: string[];
-        if (filters.type) {
-            const sectionsForType = originalData.pieces
-                .filter(p => p.type === filters.type)
-                .map(p => p.section);
-            newAvailableSections = [...new Set(sectionsForType)].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
-        } else {
-            // If no type is selected, show all unique sections from the original data
-            newAvailableSections = [...new Set(originalData.pieces.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
-        }
-        
-        setAvailableSections(newAvailableSections);
+        const { type, section, concreteClass } = filters;
 
-        // If the currently selected section is not valid for the selected type, reset it.
-        if (filters.section && !newAvailableSections.includes(filters.section)) {
-            setFilters(prev => ({...prev, section: ''}));
-        }
+        // Available types depend on section and concrete class
+        const piecesForType = originalData.pieces.filter(p =>
+            (!section || p.section === section) &&
+            (!concreteClass || p.concreteClass === concreteClass)
+        );
+        const newTypes = [...new Set(piecesForType.map(p => p.type))].sort();
 
-    }, [filters.type, originalData]);
+        // Available sections depend on type and concrete class
+        const piecesForSection = originalData.pieces.filter(p =>
+            (!type || p.type === type) &&
+            (!concreteClass || p.concreteClass === concreteClass)
+        );
+        const newSections = [...new Set(piecesForSection.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+
+        // Available concrete classes depend on type and section
+        const piecesForConcrete = originalData.pieces.filter(p =>
+            (!type || p.type === type) &&
+            (!section || p.section === section)
+        );
+        const newConcreteClasses = [...new Set(piecesForConcrete.map(p => p.concreteClass))].sort();
+
+        setAvailableOptions({
+            types: newTypes,
+            sections: newSections,
+            concreteClasses: newConcreteClasses,
+        });
+
+    }, [filters, originalData]);
 
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -237,14 +246,14 @@ const App = () => {
             
             combinedHeader.name = reportNames.join(', ');
 
-            const getUniqueSorted = (key: keyof Piece) => [...new Set(allPieces.map(p => p[key]))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+            const getUniqueSorted = (key: keyof Piece, numeric: boolean = false) => 
+                [...new Set(allPieces.map(p => String(p[key])))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric}));
             
-            setFilterOptions({
-                types: getUniqueSorted('type') as string[],
-                concreteClasses: getUniqueSorted('concreteClass') as string[],
+            setAvailableOptions({
+                types: getUniqueSorted('type'),
+                sections: getUniqueSorted('section', true),
+                concreteClasses: getUniqueSorted('concreteClass'),
             });
-            // Initially, available sections are all sections
-            setAvailableSections(getUniqueSorted('section') as string[]);
 
             let totalPieces = 0;
             let totalWeight = 0;
@@ -283,8 +292,8 @@ const App = () => {
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
                 <header className="text-center mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white">Analisador de XML de Construção</h1>
-                    <p className="mt-2 text-gray-600 dark:text-gray-400">Carregue um ou mais arquivos .xml (PILARES, VIGAS, etc.) para ver os dados.</p>
+                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 dark:text-white">Analisador de XML - Tekla x Plannix</h1>
+                    <p className="mt-2 text-gray-600 dark:text-gray-400">Carregue um ou mais arquivos em .xml gerados pelo Tekla para análise</p>
                 </header>
 
                 <div className="bg-white dark:bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8 sticky top-4 z-10">
@@ -333,21 +342,21 @@ const App = () => {
                                     <label htmlFor="type-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
                                     <select id="type-filter" value={filters.type} onChange={e => handleFilterChange('type', e.target.value)} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">Todos</option>
-                                        {filterOptions.types.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        {availableOptions.types.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label htmlFor="section-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seção</label>
                                     <select id="section-filter" value={filters.section} onChange={e => handleFilterChange('section', e.target.value)} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">Todas</option>
-                                         {availableSections.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                         {availableOptions.sections.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label htmlFor="concrete-class-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Concreto</label>
                                     <select id="concrete-class-filter" value={filters.concreteClass} onChange={e => handleFilterChange('concreteClass', e.target.value)} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">Todas</option>
-                                        {filterOptions.concreteClasses.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        {availableOptions.concreteClasses.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
                                 <div>
