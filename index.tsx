@@ -296,7 +296,8 @@ const App = () => {
                     reportNames.push(header.name);
                     allPieces.push(...pieces);
                 } catch (e) {
-                    // FIX: Catch variable 'e' is of type 'unknown' in strict mode. Must check type before accessing properties.
+                    // FIX: The caught error `e` is of type `unknown`. To prevent runtime errors,
+                    // check if it's an instance of Error before accessing its properties.
                     const message = e instanceof Error ? e.message : String(e);
                     throw new Error(`[${selectedFiles[index].name}] ${message}`);
                 }
@@ -355,7 +356,8 @@ const App = () => {
             setDisplayedData(data);
 
         } catch (e) {
-            // FIX: Catch variable 'e' is of type 'unknown' in strict mode. Must check type before accessing properties.
+            // FIX: The caught error `e` is of type `unknown`. To prevent runtime errors,
+            // check if it's an instance of Error before accessing its properties.
             const message = e instanceof Error ? e.message : String(e);
             setError(message || 'Ocorreu um erro desconhecido.');
             setOriginalData(null);
@@ -402,7 +404,6 @@ const App = () => {
             return acc;
         }, {} as Record<string, number>);
 
-        // FIX: Explicitly cast sorting values to numbers to prevent type inference issues with arithmetic operations.
         const sortedEntries = Object.entries(typeCounts).sort(([,a],[,b]) => Number(b) - Number(a));
         const labels = sortedEntries.map(([key]) => key);
         const data = sortedEntries.map(([,value]) => value);
@@ -430,16 +431,17 @@ const App = () => {
             datasets: [{
                 label: 'Peso (kg)',
                 data: top10Heaviest.map(p => p.weight),
-                backgroundColor: '#fcc200', // primary
-                borderColor: '#e3af00',   // primary-hover
+                backgroundColor: '#fcc200',
+                borderColor: '#e3af00',
                 borderWidth: 1,
             }]
         };
     }, [displayedData]);
     
     const chartOptions = useMemo(() => {
-        const textColor = '#4b5563'; // text-secondary
-        const gridColor = 'rgba(0, 0, 0, 0.05)';
+        const textColor = '#475569'; // text-secondary (slate-600)
+        const titleColor = '#1e293b'; // text-primary (slate-800)
+        const gridColor = '#e2e8f0'; // border-default (slate-200)
         
         return {
             responsive: true,
@@ -450,8 +452,8 @@ const App = () => {
                 },
                 title: {
                     display: true,
-                    color: '#111827', // text-primary
-                    font: { size: 16 }
+                    color: titleColor,
+                    font: { size: 16, weight: 'bold' }
                 }
             },
             scales: {
@@ -469,22 +471,22 @@ const App = () => {
 
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-            <div className="max-w-4xl mx-auto">
-                <header className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-text-primary">Analisador de XML - Tekla x Plannix</h1>
-                    <p className="mt-2 text-lg text-text-secondary">Carregue um ou mais arquivos em .xml gerados pelo Tekla para análise</p>
+            <div className="max-w-6xl mx-auto">
+                <header className="text-center mb-10">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-text-primary">Analisador de XML - Tekla x Plannix</h1>
+                    <p className="mt-3 text-base sm:text-lg text-text-secondary max-w-3xl mx-auto">Carregue um ou mais arquivos em .xml gerados pelo Tekla para análise</p>
                 </header>
 
-                <div className="bg-surface rounded-lg shadow-lg border border-border-default p-6 mb-8 sticky top-4 z-10">
+                <div className="bg-surface rounded-xl shadow-md border border-border-default p-6 mb-8 sticky top-4 z-10">
                     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-4">
-                        <label className="w-full sm:w-auto flex-grow cursor-pointer bg-gray-100 text-text-secondary font-medium py-2 px-4 rounded-md text-center hover:bg-gray-200 transition-colors truncate">
+                        <label className="w-full sm:w-auto flex-grow cursor-pointer bg-surface border border-border-default text-text-secondary font-medium py-3 px-4 rounded-md text-center hover:bg-background transition-colors truncate">
                             <span>{fileInfoText || 'Selecionar arquivo(s) XML'}</span>
                             <input type="file" accept=".xml,text/xml" onChange={handleFileChange} className="hidden" aria-label="Selecione os arquivos XML" multiple />
                         </label>
                         <button 
                             type="submit" 
                             disabled={selectedFiles.length === 0 || isLoading}
-                            className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-text font-bold py-2 px-6 rounded-md shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:bg-primary/50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                            className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-text font-bold py-3 px-6 rounded-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background disabled:bg-primary/50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 transform hover:-translate-y-px"
                         >
                              {isLoading && <svg className="animate-spin -ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
                             <span>{isLoading ? 'Processando...' : 'Processar XML'}</span>
@@ -493,25 +495,25 @@ const App = () => {
                 </div>
 
                 {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-8" role="alert">
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative mb-8" role="alert">
                         <strong className="font-bold">Erro: </strong>
                         <span className="block sm:inline">{error}</span>
                     </div>
                 )}
 
                 {displayedData && (
-                    <div className="space-y-6 animate-fade-in">
-                        <div className="bg-surface rounded-lg shadow-lg border border-border-default p-6">
-                            <h2 className="text-2xl font-semibold text-text-primary mb-4">Informações do Projeto</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 text-base">
-                                <div><strong className="text-text-secondary">Obra:</strong> <span className="text-text-subtle">{displayedData.header.obra}</span></div>
-                                <div><strong className="text-text-secondary">Relatório:</strong> <span className="text-text-subtle">{displayedData.header.name}</span></div>
-                                <div><strong className="text-text-secondary">Projetista:</strong> <span className="text-text-subtle">{displayedData.header.projetista}</span></div>
+                    <div className="space-y-8 animate-fade-in">
+                        <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
+                            <h2 className="text-xl font-bold text-text-primary mb-4">Informações do Projeto</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+                                <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Obra</span><span className="text-lg text-text-primary mt-1">{displayedData.header.obra}</span></div>
+                                <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Relatório(s)</span><span className="text-lg text-text-primary mt-1">{displayedData.header.name}</span></div>
+                                <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Projetista</span><span className="text-lg text-text-primary mt-1">{displayedData.header.projetista}</span></div>
                             </div>
                         </div>
                         
-                        <div className="bg-surface rounded-lg shadow-lg border border-border-default p-6">
-                            <h2 className="text-2xl font-semibold text-text-primary mb-6">Filtros</h2>
+                        <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
+                            <h2 className="text-xl font-bold text-text-primary mb-6">Filtros</h2>
                             <div className="flex flex-col gap-6">
                                 <div>
                                     <label htmlFor="name-filter" className="block text-sm font-medium text-text-secondary mb-1">Nome da Peça</label>
@@ -528,9 +530,9 @@ const App = () => {
                                             <label className="block text-sm font-medium text-text-secondary mb-1">
                                                 {group.label} {group.selected.length > 0 && `(${group.selected.length} selecionado${group.selected.length > 1 ? 's' : ''})`}
                                             </label>
-                                            <div className="h-32 overflow-y-auto p-2 border border-border-default rounded-lg bg-gray-50 space-y-2">
+                                            <div className="h-40 overflow-y-auto p-3 border border-border-default rounded-lg bg-background space-y-2">
                                                 {group.options.map(opt => (
-                                                    <label key={opt} htmlFor={`${group.id}-${opt}`} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-primary-hover">
+                                                    <label key={opt} htmlFor={`${group.id}-${opt}`} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary">
                                                         <input
                                                             type="checkbox"
                                                             id={`${group.id}-${opt}`}
@@ -548,10 +550,10 @@ const App = () => {
                                 
                                 <div className="flex justify-end pt-4 mt-2 border-t border-border-default">
                                     <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
-                                        <button onClick={handleClearFilters} className="w-full sm:w-auto bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-md transition-colors text-sm">
+                                        <button onClick={handleClearFilters} className="w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-md transition-colors text-sm">
                                             Limpar Filtros
                                         </button>
-                                        <button onClick={handleApplyFilters} className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-text font-bold py-2 px-4 rounded-md shadow-md transition-colors text-sm">
+                                        <button onClick={handleApplyFilters} className="w-full sm:w-auto bg-primary hover:bg-primary-hover text-primary-text font-bold py-2 px-4 rounded-md shadow-sm transition-colors text-sm">
                                             Aplicar Filtros
                                         </button>
                                     </div>
@@ -559,52 +561,52 @@ const App = () => {
                             </div>
                         </div>
 
-                        <div className="bg-surface rounded-lg shadow-lg border border-border-default overflow-hidden">
+                        <div className="bg-surface rounded-xl shadow-md border border-border-default overflow-hidden">
                              <div className="p-6">
-                                <h2 className="text-2xl font-semibold text-text-primary">Resumo (Filtrado)</h2>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 text-center mt-4">
-                                   <div className="p-4 bg-background rounded-lg">
-                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Nº Total de Peças</p>
-                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalPieces)}</p>
+                                <h2 className="text-xl font-bold text-text-primary">Resumo (Filtrado)</h2>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-6 text-center mt-4">
+                                   <div className="p-4 sm:p-6 bg-background rounded-lg">
+                                       <p className="text-sm text-text-subtle uppercase tracking-wider">Nº Peças</p>
+                                       <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalPieces)}</p>
                                    </div>
-                                   <div className="p-4 bg-background rounded-lg">
+                                   <div className="p-4 sm:p-6 bg-background rounded-lg">
                                        <p className="text-sm text-text-subtle uppercase tracking-wider">Peso Total (kg)</p>
-                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                       <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                                    </div>
-                                   <div className="p-4 bg-background rounded-lg">
+                                   <div className="p-4 sm:p-6 bg-background rounded-lg">
                                        <p className="text-sm text-text-subtle uppercase tracking-wider">Volume Total (m³)</p>
-                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalVolume, {minimumFractionDigits: 4, maximumFractionDigits: 4})}</p>
+                                       <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.totalVolume, {minimumFractionDigits: 4, maximumFractionDigits: 4})}</p>
                                    </div>
-                                   <div className="p-4 bg-background rounded-lg">
+                                   <div className="p-4 sm:p-6 bg-background rounded-lg">
                                        <p className="text-sm text-text-subtle uppercase tracking-wider">Peso Médio (kg)</p>
-                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.avgWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                       <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.avgWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                                    </div>
-                                   <div className="p-4 bg-background rounded-lg">
+                                   <div className="p-4 sm:p-6 bg-background rounded-lg">
                                        <p className="text-sm text-text-subtle uppercase tracking-wider">Peso Máximo (kg)</p>
-                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.maxWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                       <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.maxWeight, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                                    </div>
-                                   <div className="p-4 bg-background rounded-lg">
+                                   <div className="p-4 sm:p-6 bg-background rounded-lg">
                                        <p className="text-sm text-text-subtle uppercase tracking-wider">Compr. Médio (m)</p>
-                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.avgLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                       <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.avgLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                                    </div>
-                                   <div className="p-4 bg-background rounded-lg">
+                                   <div className="p-4 sm:p-6 bg-background rounded-lg">
                                        <p className="text-sm text-text-subtle uppercase tracking-wider">Compr. Máximo (m)</p>
-                                       <p className="text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.maxLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                       <p className="text-2xl sm:text-3xl font-bold text-text-primary mt-1">{formatNumber(displayedData.summary.maxLength / 100, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div className="bg-surface rounded-lg shadow-lg border border-border-default overflow-hidden">
+                        <div className="bg-surface rounded-xl shadow-md border border-border-default overflow-hidden">
                              <div className="p-6">
-                                <h2 className="text-2xl font-semibold text-text-primary">Detalhamento das Peças</h2>
+                                <h2 className="text-xl font-bold text-text-primary">Detalhamento das Peças</h2>
                                 {originalData && <p className="text-sm text-text-subtle mt-1">
-                                    Exibindo {displayedData.pieces.length} de {originalData.pieces.length} peças ({formatNumber(displayedData.summary.totalPieces)} no total).
+                                    Exibindo {displayedData.pieces.length} de {originalData.pieces.length} tipos de peças ({formatNumber(displayedData.summary.totalPieces)} no total).
                                 </p>}
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left text-text-secondary">
-                                    <thead className="text-xs text-text-secondary uppercase bg-gray-50">
+                                    <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                                         <tr>
                                             <th scope="col" className="px-6 py-3">Nome</th>
                                             <th scope="col" className="px-6 py-3">Tipo</th>
@@ -616,10 +618,10 @@ const App = () => {
                                             <th scope="col" className="px-6 py-3">Concreto</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-border-default">
                                         {displayedData.pieces.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true})).map((piece, index) => (
-                                            <tr key={index} className="bg-surface border-b border-border-default hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4 font-medium text-text-primary whitespace-nowrap">{piece.name}</td>
+                                            <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-4 font-semibold text-text-primary whitespace-nowrap">{piece.name}</td>
                                                 <td className="px-6 py-4">{piece.type}</td>
                                                 <td className="px-6 py-4 text-center">{piece.quantity}</td>
                                                 <td className="px-6 py-4">{piece.section}</td>
@@ -634,16 +636,16 @@ const App = () => {
                             </div>
                         </div>
 
-                        <div className="bg-surface rounded-lg shadow-lg border border-border-default p-6">
-                            <h2 className="text-2xl font-semibold text-text-primary mb-4 border-b border-border-default pb-2">Visualização de Dados</h2>
+                        <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
+                            <h2 className="text-xl font-bold text-text-primary mb-4 border-b border-border-default pb-3">Visualização de Dados</h2>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-                                <div className="min-h-[400px] relative">
+                                <div className="min-h-[450px] relative">
                                     {quantityByTypeData && <Pie data={quantityByTypeData} options={{...chartOptions, plugins: {...chartOptions.plugins, title: {...chartOptions.plugins.title, text: 'Distribuição por Tipo de Produto'}}}} />}
                                 </div>
-                                <div className="min-h-[400px] relative">
+                                <div className="min-h-[450px] relative">
                                     {quantityByTypeData && <Bar data={quantityByTypeData} options={{...chartOptions, plugins: {...chartOptions.plugins, legend: {display: false}, title: {...chartOptions.plugins.title, text: 'Quantidade de Peças por Tipo'}}}} />}
                                 </div>
-                                <div className="lg:col-span-2 min-h-[400px] relative">
+                                <div className="lg:col-span-2 min-h-[450px] relative">
                                     {heaviestPartsData && <Bar data={heaviestPartsData} options={{...chartOptions, indexAxis: 'y', plugins: {...chartOptions.plugins, legend: {display: false}, title: {...chartOptions.plugins.title, text: 'Top 10 Peças mais Pesadas'}}}} />}
                                 </div>
                             </div>

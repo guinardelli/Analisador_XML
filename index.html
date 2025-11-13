@@ -14,14 +14,14 @@
               primary: {
                 DEFAULT: '#fcc200', // Amarelo Marna
                 hover: '#e3af00',   // Amarelo Marna (Hover)
-                text: '#111827',    // Texto para contraste em botões primários
+                text: '#0f172a',    // slate-900 for max contrast
               },
-              background: '#f3f4f6',   // Fundo principal da página (cinza claro)
+              background: '#f8fafc',   // slate-50
               surface: '#ffffff',      // Fundo de cards e painéis (branco)
-              'text-primary': '#111827',    // Texto principal (preto suave)
-              'text-secondary': '#4b5563', // Texto secundário (cinza escuro)
-              'text-subtle': '#6b7281',     // Texto sutil (cinza médio)
-              'border-default': '#e5e7eb', // Bordas de inputs e divisórias
+              'text-primary': '#1e293b',    // slate-800
+              'text-secondary': '#475569', // slate-600
+              'text-subtle': '#64748b',     // slate-500
+              'border-default': '#e2e8f0', // slate-200
             }
           }
         }
@@ -30,6 +30,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
         }
         /* Custom scrollbar for light theme aesthetics */
         ::-webkit-scrollbar {
@@ -37,7 +38,7 @@
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #f3f4f6; /* background */
+            background: #f8fafc; /* background */
         }
         ::-webkit-scrollbar-thumb {
             background: #d1d5db; /* gray-300 */
