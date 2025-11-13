@@ -137,6 +137,7 @@ const App = () => {
     const initialFilters: Filters = { name: '', type: [], section: [], concreteClass: [] };
     const [filters, setFilters] = useState<Filters>(initialFilters); // Applied filters
     const [stagedFilters, setStagedFilters] = useState<Filters>(initialFilters); // UI selections
+    const [releasedPieces, setReleasedPieces] = useState<Set<string>>(new Set());
     
     const [availableOptions, setAvailableOptions] = useState({
         types: [] as string[],
@@ -271,6 +272,7 @@ const App = () => {
         setDisplayedData(null);
         setFilters(initialFilters);
         setStagedFilters(initialFilters);
+        setReleasedPieces(new Set());
 
         try {
             const fileReadPromises = selectedFiles.map(file => {
@@ -297,7 +299,7 @@ const App = () => {
                     reportNames.push(header.name);
                     allPieces.push(...pieces);
                 } catch (e) {
-                    // FIX: The caught error `e` is of type `unknown`. To prevent runtime errors, check if it's an instance of Error before accessing its properties.
+                    // FIX: The caught error `e` is of type `unknown`. Safely access the message property by checking if it's an instance of Error.
                     const message = e instanceof Error ? e.message : String(e);
                     throw new Error(`[${selectedFiles[index].name}] ${message}`);
                 }
@@ -356,7 +358,7 @@ const App = () => {
             setDisplayedData(data);
 
         } catch (e) {
-            // FIX: The caught error `e` is of type `unknown`. To prevent runtime errors, check if it's an instance of Error before accessing its properties.
+            // FIX: The caught error `e` is of type `unknown`. Safely access the message property by checking if it's an instance of Error.
             const message = e instanceof Error ? e.message : String(e);
             setError(message || 'Ocorreu um erro desconhecido.');
             setOriginalData(null);
@@ -387,6 +389,18 @@ const App = () => {
     const handleClearFilters = () => {
         setFilters(initialFilters);
         setStagedFilters(initialFilters);
+    };
+
+    const handleReleaseToggle = (pieceName: string) => {
+        setReleasedPieces(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(pieceName)) {
+                newSet.delete(pieceName);
+            } else {
+                newSet.add(pieceName);
+            }
+            return newSet;
+        });
     };
 
     const formatNumber = (num: number, options?: Intl.NumberFormatOptions) => {
@@ -631,6 +645,7 @@ const App = () => {
                                 <table className="w-full text-sm text-left text-text-secondary">
                                     <thead className="text-xs text-slate-500 uppercase bg-slate-50">
                                         <tr>
+                                            <th scope="col" className="px-4 py-3"></th>
                                             <th scope="col" className="px-6 py-3">Nome</th>
                                             <th scope="col" className="px-6 py-3">Tipo</th>
                                             <th scope="col" className="px-6 py-3 text-center">Qtd.</th>
@@ -643,7 +658,16 @@ const App = () => {
                                     </thead>
                                     <tbody className="divide-y divide-border-default">
                                         {displayedData.pieces.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true})).map((piece, index) => (
-                                            <tr key={index} className="hover:bg-slate-50/50 transition-colors">
+                                            <tr key={`${piece.name}-${index}`} className={`transition-colors ${releasedPieces.has(piece.name) ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-slate-50/50'}`}>
+                                                <td className="px-4 py-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        aria-label={`Marcar ${piece.name} como liberado`}
+                                                        checked={releasedPieces.has(piece.name)}
+                                                        onChange={() => handleReleaseToggle(piece.name)}
+                                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                                                    />
+                                                </td>
                                                 <td className="px-6 py-4 font-semibold text-text-primary whitespace-nowrap">{piece.name}</td>
                                                 <td className="px-6 py-4">{piece.type}</td>
                                                 <td className="px-6 py-4 text-center">{piece.quantity}</td>
