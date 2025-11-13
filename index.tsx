@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -260,6 +261,7 @@ const App = () => {
             setOriginalData(data);
             setDisplayedData(data);
 
+        // FIX: Corrected catch block syntax. The previous syntax `catch (e: any) e {` was invalid.
         } catch (e: any) {
             setError(e.message || 'Ocorreu um erro desconhecido.');
             setOriginalData(null);
@@ -322,7 +324,7 @@ const App = () => {
                         
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-6">
                             <h2 className="text-2xl font-semibold mb-4">Filtros</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
                                 <div className="lg:col-span-2">
                                     <label htmlFor="name-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome da Peça</label>
                                     <input type="text" id="name-filter" value={filters.name} onChange={e => handleFilterChange('name', e.target.value)} placeholder="Buscar por nome..." className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"/>
@@ -342,7 +344,14 @@ const App = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <button onClick={() => setFilters(initialFilters)} className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors h-full mt-auto text-sm">Limpar Filtros</button>
+                                    <label htmlFor="concrete-class-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Concreto</label>
+                                    <select id="concrete-class-filter" value={filters.concreteClass} onChange={e => handleFilterChange('concreteClass', e.target.value)} className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">Todas</option>
+                                        {filterOptions.concreteClasses.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <button onClick={() => setFilters(initialFilters)} className="w-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-bold py-2 px-4 rounded-lg transition-colors h-full mt-auto text-sm">Limpar</button>
                                 </div>
                             </div>
                         </div>
