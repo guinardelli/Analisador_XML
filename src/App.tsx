@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import { SessionContextProvider } from './components/SessionContextProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
+import ProjectDetails from './pages/ProjectDetails';
 
 const App = () => {
     return (
@@ -24,6 +25,7 @@ const App = () => {
                             <Route path="analisador" element={<Analyzer />} />
                             <Route path="cadastro-projetos" element={<ProjectRegistry />} />
                             <Route path="projetos" element={<Projects />} />
+                            <Route path="projetos/:projectId" element={<ProjectDetails />} />
                             <Route path="relatorios" element={<Reports />} />
                         </Route>
                     </Route>
