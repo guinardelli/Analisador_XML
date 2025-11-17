@@ -15,10 +15,10 @@ interface PieceFromXml {
     type: string;
     quantity: number;
     section: string;
-    length: number;
-    weight: number;
-    unit_volume: number;
-    concreteClass: string;
+    length: number | null;
+    weight: number | null;
+    unit_volume: number | null;
+    concreteClass: string | null;
     piece_ids: string[];
 }
 
@@ -27,10 +27,10 @@ interface PieceForDb {
     group: string;
     quantity: number;
     section: string;
-    length: number;
-    weight: number;
-    unit_volume: number;
-    concrete_class: string;
+    length: number | null;
+    weight: number | null;
+    unit_volume: number | null;
+    concrete_class: string | null;
     piece_ids: string[];
 }
 
@@ -47,13 +47,15 @@ interface Project {
 }
 
 // --- HELPER FUNCTIONS ---
-const getElementTextContent = (element: Element, tagName: string): string => {
-    return element.querySelector(tagName)?.textContent?.trim() || 'N/A';
+const getElementTextContent = (element: Element, tagName: string): string | null => {
+    const content = element.querySelector(tagName)?.textContent?.trim();
+    return content === '' ? null : content;
 };
 
-const parseSafeFloat = (value: string): number => {
-    if (!value) return 0;
-    return parseFloat(value.replace(',', '.')) || 0;
+const parseSafeFloat = (value: string | null): number | null => {
+    if (value === null || value === '') return null;
+    const parsed = parseFloat(value.replace(',', '.'));
+    return isNaN(parsed) ? null : parsed;
 };
 
 // --- PARSING LOGIC ---
@@ -79,10 +81,10 @@ const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: PieceFr
         const piece_ids = idElements.map(id => id.textContent || '').filter(Boolean);
 
         return {
-            name: getElementTextContent(p, 'NOMEPECA'),
-            type: getElementTextContent(p, 'TIPOPRODUTO'),
-            quantity: parseInt(getElementTextContent(p, 'QUANTIDADE'), 10) || 0,
-            section: getElementTextContent(p, 'SECAO'),
+            name: getElementTextContent(p, 'NOMEPECA') || 'Nome Desconhecido',
+            type: getElementTextContent(p, 'TIPOPRODUTO') || 'Tipo Desconhecido',
+            quantity: parseInt(getElementTextContent(p, 'QUANTIDADE') || '0', 10) || 0,
+            section: getElementTextContent(p, 'SECAO') || 'Seção Desconhecida',
             length: parseSafeFloat(getElementTextContent(p, 'COMPRIMENTO')),
             weight: parseSafeFloat(getElementTextContent(p, 'PESO')),
             unit_volume: parseSafeFloat(getElementTextContent(p, 'VOLUMEUNITARIO')),
