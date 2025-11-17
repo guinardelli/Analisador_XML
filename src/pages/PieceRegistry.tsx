@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import PiecesViewer from '@/components/PiecesViewer';
 
 // --- TYPE DEFINITIONS ---
 interface PieceFromXml {
@@ -20,6 +19,7 @@ interface PieceFromXml {
     weight: number;
     unit_volume: number;
     concreteClass: string;
+    piece_ids: string[];
 }
 
 interface PieceForDb {
@@ -31,6 +31,7 @@ interface PieceForDb {
     weight: number;
     unit_volume: number;
     concrete_class: string;
+    piece_ids: string[];
 }
 
 interface XmlHeader {
@@ -43,9 +44,6 @@ interface Project {
     id: string;
     name: string;
     project_code: string;
-    client: string;
-    status: string;
-    total_volume: number;
 }
 
 // --- HELPER FUNCTIONS ---
@@ -76,16 +74,22 @@ const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: PieceFr
     const pieceElements = Array.from(xmlDoc.querySelectorAll('PECA'));
     if (pieceElements.length === 0) throw new Error('Nenhuma peça <PECA> encontrada no arquivo.');
 
-    const pieces: PieceFromXml[] = pieceElements.map(p => ({
-        name: getElementTextContent(p, 'NOMEPECA'),
-        type: getElementTextContent(p, 'TIPOPRODUTO'),
-        quantity: parseInt(getElementTextContent(p, 'QUANTIDADE'), 10) || 0,
-        section: getElementTextContent(p, 'SECAO'),
-        length: parseSafeFloat(getElementTextContent(p, 'COMPRIMENTO')),
-        weight: parseSafeFloat(getElementTextContent(p, 'PESO')),
-        unit_volume: parseSafeFloat(getElementTextContent(p, 'VOLUMEUNITARIO')),
-        concreteClass: getElementTextContent(p, 'CLASSECONCRETO'),
-    }));
+    const pieces: PieceFromXml[] = pieceElements.map(p => {
+        const idElements = Array.from(p.querySelectorAll('LISTA_IDS ID'));
+        const piece_ids = idElements.map(id => id.textContent || '').filter(Boolean);
+
+        return {
+            name: getElementTextContent(p, 'NOMEPECA'),
+            type: getElementTextContent(p, 'TIPOPRODUTO'),
+            quantity: parseInt(getElementTextContent(p, 'QUANTIDADE'), 10) || 0,
+            section: getElementTextContent(p, 'SECAO'),
+            length: parseSafeFloat(getElementTextContent(p, 'COMPRIMENTO')),
+            weight: parseSafeFloat(getElementTextContent(p, 'PESO')),
+            unit_volume: parseSafeFloat(getElementTextContent(p, 'VOLUMEUNITARIO')),
+            concreteClass: getElementTextContent(p, 'CLASSECONCRETO'),
+            piece_ids: piece_ids,
+        };
+    });
     
     return { header, pieces };
 };
@@ -99,6 +103,7 @@ const PieceRegistry = () => {
     const [fileInfoText, setFileInfoText] = useState<string>('');
     const [xmlHeader, setXmlHeader] = useState<XmlHeader | null>(null);
     const [parsedPieces, setParsedPieces] = useState<PieceForDb[]>([]);
+    const [selectedPieces, setSelectedPieces] = useState<Set<string>>(new Set());
     const [error, setError] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isSavingToDb, setIsSavingToDb] = useState<boolean>(false);
@@ -108,12 +113,11 @@ const PieceRegistry = () => {
     const [xmlProjectCode, setXmlProjectCode] = useState<string | null>(null);
     const [xmlProjectName, setXmlProjectName] = useState<string | null>(null);
     const [showNewProjectModal, setShowNewProjectModal] = useState<boolean>(false);
-    const [currentProjectStatus, setCurrentProjectStatus] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchProjects = async () => {
             if (!user) return;
-            const { data, error } = await supabase.from('projects').select('*').eq('user_id', user.id).order('name');
+            const { data, error } = await supabase.from('projects').select('id, name, project_code').eq('user_id', user.id).order('name');
             if (error) toast.error('Falha ao carregar a lista de projetos.');
             else setProjectsList(data || []);
         };
@@ -126,11 +130,11 @@ const PieceRegistry = () => {
         setSelectedFiles(files);
         setFileInfoText(files.length === 1 ? files[0].name : `${files.length} arquivos selecionados`);
         setParsedPieces([]);
+        setSelectedPieces(new Set());
         setXmlHeader(null);
         setSelectedProjectId(null);
         setXmlProjectCode(null);
         setXmlProjectName(null);
-        setCurrentProjectStatus(null);
     };
 
     const handleProcessFiles = async () => {
@@ -155,8 +159,7 @@ const PieceRegistry = () => {
 
             if (!combinedHeader) throw new Error("Nenhum cabeçalho válido encontrado.");
 
-            setXmlHeader(combinedHeader);
-            setParsedPieces(allPieces.map(p => ({
+            const piecesForDb = allPieces.map(p => ({
                 name: p.name,
                 group: p.type,
                 quantity: p.quantity,
@@ -165,12 +168,16 @@ const PieceRegistry = () => {
                 weight: p.weight,
                 unit_volume: p.unit_volume,
                 concrete_class: p.concreteClass,
-            })));
+                piece_ids: p.piece_ids,
+            }));
+
+            setXmlHeader(combinedHeader);
+            setParsedPieces(piecesForDb);
+            setSelectedPieces(new Set(piecesForDb.map(p => p.name))); // Select all by default
 
             const existingProject = projectsList.find(p => p.project_code === combinedHeader!.obra);
             if (existingProject) {
                 setSelectedProjectId(existingProject.id);
-                setCurrentProjectStatus(existingProject.status);
                 toast.success(`Projeto "${existingProject.name}" selecionado automaticamente.`);
             } else {
                 setXmlProjectCode(combinedHeader.obra);
@@ -180,6 +187,7 @@ const PieceRegistry = () => {
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Ocorreu um erro desconhecido.');
             setParsedPieces([]);
+            setSelectedPieces(new Set());
             setXmlHeader(null);
         } finally {
             setIsLoading(false);
@@ -187,7 +195,15 @@ const PieceRegistry = () => {
     };
 
     const handleInsertPiecesToDb = useCallback(async (projectId: string) => {
-        if (!user || parsedPieces.length === 0) return;
+        if (!user || selectedPieces.size === 0) {
+            toast.error("Nenhuma peça selecionada para importação.");
+            return;
+        }
+
+        if (!window.confirm('Isso substituirá todas as peças existentes neste projeto. Deseja continuar?')) {
+            return;
+        }
+
         setIsSavingToDb(true);
         
         const { error: deleteError } = await supabase.from('pieces').delete().eq('project_id', projectId);
@@ -197,7 +213,10 @@ const PieceRegistry = () => {
             return;
         }
 
-        const piecesToInsert = parsedPieces.map(piece => ({ ...piece, project_id: projectId, user_id: user.id }));
+        const piecesToInsert = parsedPieces
+            .filter(p => selectedPieces.has(p.name))
+            .map(piece => ({ ...piece, project_id: projectId, user_id: user.id }));
+
         const { error: insertError } = await supabase.from('pieces').insert(piecesToInsert);
         if (insertError) {
             toast.error(`Erro ao salvar peças: ${insertError.message}`);
@@ -205,14 +224,14 @@ const PieceRegistry = () => {
             return;
         }
 
-        const totalProjectVolume = parsedPieces.reduce((sum, p) => sum + (p.unit_volume * p.quantity), 0);
+        const totalProjectVolume = piecesToInsert.reduce((sum, p) => sum + (p.unit_volume * p.quantity), 0);
         const { error: updateError } = await supabase.from('projects').update({ total_volume: totalProjectVolume }).eq('id', projectId);
         if (updateError) toast.error('Peças salvas, mas falha ao atualizar o volume do projeto.');
 
         toast.success('Peças salvas com sucesso no projeto!');
         navigate(`/projetos/${projectId}`);
         setIsSavingToDb(false);
-    }, [user, parsedPieces, navigate]);
+    }, [user, parsedPieces, selectedPieces, navigate]);
 
     const handleCreateNewProjectAndInsertPieces = useCallback(async () => {
         if (!user || !xmlProjectCode || !xmlProjectName) return;
@@ -238,6 +257,26 @@ const PieceRegistry = () => {
         setIsSavingToDb(false);
 
     }, [user, xmlProjectCode, xmlProjectName, xmlHeader, handleInsertPiecesToDb]);
+
+    const handleTogglePieceSelection = (pieceName: string) => {
+        setSelectedPieces(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(pieceName)) {
+                newSet.delete(pieceName);
+            } else {
+                newSet.add(pieceName);
+            }
+            return newSet;
+        });
+    };
+
+    const handleToggleSelectAll = () => {
+        if (selectedPieces.size === parsedPieces.length) {
+            setSelectedPieces(new Set());
+        } else {
+            setSelectedPieces(new Set(parsedPieces.map(p => p.name)));
+        }
+    };
 
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -276,26 +315,69 @@ const PieceRegistry = () => {
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Associar Peças a um Projeto</CardTitle>
-                                <CardDescription>Selecione um projeto existente ou crie um novo para salvar as peças processadas.</CardDescription>
+                                <CardTitle>Salvar Peças no Projeto</CardTitle>
+                                <CardDescription>Selecione um projeto e clique em salvar para importar as peças selecionadas abaixo.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
                                     <div className="space-y-2">
-                                        <Label htmlFor="project-select">Projeto Existente</Label>
+                                        <Label htmlFor="project-select">Projeto de Destino</Label>
                                         <select id="project-select" className="w-full bg-surface border border-border-default rounded-md p-2 text-sm" value={selectedProjectId || ''} onChange={(e) => setSelectedProjectId(e.target.value)} disabled={!user || isLoading || isSavingToDb}>
                                             <option value="">Selecione um projeto</option>
                                             {projectsList.map(p => <option key={p.id} value={p.id}>{p.name} ({p.project_code})</option>)}
                                         </select>
                                     </div>
-                                    <Button onClick={() => handleInsertPiecesToDb(selectedProjectId!)} disabled={isSavingToDb || !selectedProjectId || !user || parsedPieces.length === 0}>
-                                        {isSavingToDb ? 'Salvando...' : 'Salvar Peças no Projeto Selecionado'}
+                                    <Button onClick={() => handleInsertPiecesToDb(selectedProjectId!)} disabled={isSavingToDb || !selectedProjectId || !user || selectedPieces.size === 0}>
+                                        {isSavingToDb ? 'Salvando...' : `Salvar ${selectedPieces.size} Peças`}
                                     </Button>
                                 </div>
                             </CardContent>
                         </Card>
                         
-                        <PiecesViewer initialPieces={parsedPieces} />
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Seleção de Peças para Importação</CardTitle>
+                                <CardDescription>Selecione as peças que deseja importar para o projeto. {selectedPieces.size} de {parsedPieces.length} selecionadas.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto border rounded-lg">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-slate-50">
+                                            <tr>
+                                                <th className="p-2 w-12 text-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                        checked={selectedPieces.size === parsedPieces.length && parsedPieces.length > 0}
+                                                        onChange={handleToggleSelectAll}
+                                                    />
+                                                </th>
+                                                <th className="p-2 text-left font-medium text-text-secondary">Nome da Peça</th>
+                                                <th className="p-2 text-left font-medium text-text-secondary">Tipo</th>
+                                                <th className="p-2 text-center font-medium text-text-secondary">Qtd.</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {parsedPieces.map(piece => (
+                                                <tr key={piece.name} className="hover:bg-slate-50">
+                                                    <td className="p-2 w-12 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                            checked={selectedPieces.has(piece.name)}
+                                                            onChange={() => handleTogglePieceSelection(piece.name)}
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 font-semibold text-text-primary">{piece.name}</td>
+                                                    <td className="p-2 text-text-secondary">{piece.group}</td>
+                                                    <td className="p-2 text-center text-text-secondary">{piece.quantity}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
             </div>
