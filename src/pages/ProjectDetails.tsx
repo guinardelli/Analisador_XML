@@ -85,7 +85,7 @@ const ProjectDetails = () => {
         fetchProjectData();
     }, [fetchProjectData]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setEditableProject(prev => ({ ...prev, [name]: value }));
     };
@@ -99,7 +99,6 @@ const ProjectDetails = () => {
             .update({
                 ...editableProject,
                 area: editableProject.area ? parseFloat(String(editableProject.area)) : null,
-                total_volume: editableProject.total_volume ? parseFloat(String(editableProject.total_volume)) : null,
             })
             .eq('id', projectId);
 
@@ -147,11 +146,24 @@ const ProjectDetails = () => {
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <div className="space-y-2"><Label htmlFor="client">Cliente</Label><Input id="client" name="client" value={editableProject.client || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label htmlFor="status">Status</Label><Input id="status" name="status" value={editableProject.status || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="status">Status</Label>
+                                    {isEditing ? (
+                                        <select id="status" name="status" value={editableProject.status || ''} onChange={handleInputChange} className="w-full bg-surface border border-border-default rounded-md p-2 text-sm">
+                                            <option value="Programar">Programar</option>
+                                            <option value="Em Andamento">Em Andamento</option>
+                                            <option value="Concluído">Concluído</option>
+                                            <option value="Pausado">Pausado</option>
+                                            <option value="Cancelado">Cancelado</option>
+                                        </select>
+                                    ) : (
+                                        <Input value={editableProject.status || ''} readOnly />
+                                    )}
+                                </div>
                                 <div className="space-y-2"><Label htmlFor="address">Endereço</Label><Input id="address" name="address" value={editableProject.address || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
                                 <div className="space-y-2"><Label htmlFor="area">Área (m²)</Label><Input id="area" name="area" type="number" value={editableProject.area || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
                                 <div className="space-y-2"><Label htmlFor="art_number">Nº ART</Label><Input id="art_number" name="art_number" value={editableProject.art_number || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label htmlFor="total_volume">Volume Total (m³)</Label><Input id="total_volume" name="total_volume" type="number" value={editableProject.total_volume || ''} readOnly className="bg-background" /></div>
+                                <div className="space-y-2"><Label htmlFor="total_volume">Volume Total (m³)</Label><Input id="total_volume" name="total_volume" type="number" value={editableProject.total_volume || ''} readOnly className="bg-slate-100 cursor-not-allowed" /></div>
                                 <div className="space-y-2"><Label htmlFor="start_date">Data de Início</Label><Input id="start_date" name="start_date" type="date" value={editableProject.start_date || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
                                 <div className="space-y-2"><Label htmlFor="end_date">Data de Término</Label><Input id="end_date" name="end_date" type="date" value={editableProject.end_date || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
                             </div>
