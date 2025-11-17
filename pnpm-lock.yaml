@@ -12,68 +12,68 @@ importers:
         specifier: ^1.1.15
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.5))(@types/react@19.2.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-label':
-        specifier: ^2.1.8
+        specifier: 2.1.8
         version: 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.5))(@types/react@19.2.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-slot':
-        specifier: ^1.2.4
+        specifier: 1.2.4
         version: 1.2.4(@types/react@19.2.5)(react@19.2.0)
       '@supabase/auth-ui-react':
-        specifier: ^0.4.7
+        specifier: 0.4.7
         version: 0.4.7(@supabase/supabase-js@2.81.1)
       '@supabase/auth-ui-shared':
-        specifier: ^0.1.8
+        specifier: 0.1.8
         version: 0.1.8(@supabase/supabase-js@2.81.1)
       '@supabase/supabase-js':
-        specifier: ^2.81.1
+        specifier: 2.81.1
         version: 2.81.1
       chart.js:
-        specifier: ^4.4.3
+        specifier: 4.5.1
         version: 4.5.1
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: 0.7.1
         version: 0.7.1
       clsx:
-        specifier: ^2.1.1
+        specifier: 2.1.1
         version: 2.1.1
       lucide-react:
-        specifier: ^0.554.0
+        specifier: 0.554.0
         version: 0.554.0(react@19.2.0)
       react:
-        specifier: ^19.2.0
+        specifier: 19.2.0
         version: 19.2.0
       react-chartjs-2:
-        specifier: ^5.2.0
+        specifier: 5.3.1
         version: 5.3.1(chart.js@4.5.1)(react@19.2.0)
       react-dom:
-        specifier: ^19.2.0
+        specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
       react-hot-toast:
-        specifier: ^2.6.0
+        specifier: ^2.4.1
         version: 2.6.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       react-router-dom:
-        specifier: ^7.9.6
+        specifier: 7.9.6
         version: 7.9.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       tailwind-merge:
-        specifier: ^3.4.0
+        specifier: 3.4.0
         version: 3.4.0
     devDependencies:
       '@types/node':
-        specifier: ^22.14.0
+        specifier: 22.19.1
         version: 22.19.1
       '@types/react':
-        specifier: ^19.2.5
+        specifier: 19.2.5
         version: 19.2.5
       '@types/react-dom':
-        specifier: ^19.2.3
+        specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.5)
       '@vitejs/plugin-react':
-        specifier: ^5.0.0
+        specifier: 5.1.1
         version: 5.1.1(vite@6.4.1(@types/node@22.19.1))
       typescript:
-        specifier: ~5.8.2
+        specifier: 5.8.3
         version: 5.8.3
       vite:
-        specifier: ^6.2.0
+        specifier: 6.4.1
         version: 6.4.1(@types/node@22.19.1)
 
 packages:
