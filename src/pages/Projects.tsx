@@ -5,6 +5,7 @@ import { Trash2, Building, Activity, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Project {
     id: string;
@@ -20,6 +21,8 @@ interface Project {
 const Projects = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -45,21 +48,29 @@ const Projects = () => {
         fetchProjects();
     }, []);
 
-    const handleDelete = async (projectId: string) => {
-        if (window.confirm('Tem certeza que deseja excluir este projeto? Todos os dados relacionados serão perdidos.')) {
-            const { error } = await supabase
-                .from('projects')
-                .delete()
-                .eq('id', projectId);
+    const handleDeleteRequest = (project: Project) => {
+        setProjectToDelete(project);
+        setIsDeleteDialogOpen(true);
+    };
 
-            if (error) {
-                toast.error('Erro ao excluir o projeto.');
-                console.error('Error deleting project:', error);
-            } else {
-                toast.success('Projeto excluído com sucesso!');
-                setProjects(projects.filter(p => p.id !== projectId));
-            }
+    const handleDeleteConfirm = async () => {
+        if (!projectToDelete) return;
+
+        const { error } = await supabase
+            .from('projects')
+            .delete()
+            .eq('id', projectToDelete.id);
+
+        if (error) {
+            toast.error('Erro ao excluir o projeto.');
+            console.error('Error deleting project:', error);
+        } else {
+            toast.success(`Projeto "${projectToDelete.name}" excluído com sucesso!`);
+            setProjects(projects.filter(p => p.id !== projectToDelete.id));
         }
+        
+        setIsDeleteDialogOpen(false);
+        setProjectToDelete(null);
     };
 
     if (loading) {
@@ -110,9 +121,9 @@ const Projects = () => {
                             </CardContent>
                             <CardFooter className="flex justify-between items-center">
                                 <span className="text-xs text-gray-500">
-                                    Criado em: {new Date(project.created_at).toLocaleDateString()}
+                                    Criado em: {new Date(project.created_at).toLocaleString()}
                                 </span>
-                                <Button variant="destructive" size="icon" onClick={() => handleDelete(project.id)}>
+                                <Button variant="destructive" size="icon" onClick={() => handleDeleteRequest(project)}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </CardFooter>
@@ -120,6 +131,21 @@ const Projects = () => {
                     ))}
                 </div>
             )}
+
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirmar Exclusão</DialogTitle>
+                        <DialogDescription>
+                            Tem certeza que deseja excluir o projeto "{projectToDelete?.name}"? Esta ação não pode ser desfeita e todas as peças associadas serão removidas.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</Button>
+                        <Button variant="destructive" onClick={handleDeleteConfirm}>Excluir</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

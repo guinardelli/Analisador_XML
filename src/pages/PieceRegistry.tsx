@@ -113,12 +113,13 @@ const PieceRegistry = () => {
     const [xmlProjectCode, setXmlProjectCode] = useState<string | null>(null);
     const [xmlProjectName, setXmlProjectName] = useState<string | null>(null);
     const [showNewProjectModal, setShowNewProjectModal] = useState<boolean>(false);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchProjects = async () => {
             if (!user) return;
             const { data, error } = await supabase.from('projects').select('id, name, project_code').eq('user_id', user.id).order('name');
-            if (error) toast.error('Falha ao carregar a lista de projetos.');
+            if (error) toast.error('Falha ao carregar la lista de projetos.');
             else setProjectsList(data || []);
         };
         fetchProjects();
@@ -194,44 +195,41 @@ const PieceRegistry = () => {
         }
     };
 
-    const handleInsertPiecesToDb = useCallback(async (projectId: string) => {
-        if (!user || selectedPieces.size === 0) {
+    const handleSaveRequest = () => {
+        if (!selectedProjectId || selectedPieces.size === 0) {
+            toast.error("Selecione um projeto e ao menos uma peça.");
+            return;
+        }
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleInsertPiecesToDb = useCallback(async () => {
+        if (!user || !selectedProjectId || selectedPieces.size === 0) {
             toast.error("Nenhuma peça selecionada para importação.");
             return;
         }
 
-        if (!window.confirm('Isso substituirá todas as peças existentes neste projeto. Deseja continuar?')) {
-            return;
-        }
-
+        setIsConfirmModalOpen(false);
         setIsSavingToDb(true);
         
-        const { error: deleteError } = await supabase.from('pieces').delete().eq('project_id', projectId);
-        if (deleteError) {
-            toast.error(`Erro ao limpar peças antigas: ${deleteError.message}`);
+        const piecesToInsert = parsedPieces.filter(p => selectedPieces.has(p.name));
+
+        const { error: rpcError } = await supabase.rpc('replace_project_pieces', {
+            p_project_id: selectedProjectId,
+            p_user_id: user.id,
+            p_pieces: piecesToInsert
+        });
+
+        if (rpcError) {
+            toast.error(`Erro ao salvar peças: ${rpcError.message}`);
             setIsSavingToDb(false);
             return;
         }
-
-        const piecesToInsert = parsedPieces
-            .filter(p => selectedPieces.has(p.name))
-            .map(piece => ({ ...piece, project_id: projectId, user_id: user.id }));
-
-        const { error: insertError } = await supabase.from('pieces').insert(piecesToInsert);
-        if (insertError) {
-            toast.error(`Erro ao salvar peças: ${insertError.message}`);
-            setIsSavingToDb(false);
-            return;
-        }
-
-        const totalProjectVolume = piecesToInsert.reduce((sum, p) => sum + (p.unit_volume * p.quantity), 0);
-        const { error: updateError } = await supabase.from('projects').update({ total_volume: totalProjectVolume }).eq('id', projectId);
-        if (updateError) toast.error('Peças salvas, mas falha ao atualizar o volume do projeto.');
 
         toast.success('Peças salvas com sucesso no projeto!');
-        navigate(`/projetos/${projectId}`);
+        navigate(`/projetos/${selectedProjectId}`);
         setIsSavingToDb(false);
-    }, [user, parsedPieces, selectedPieces, navigate]);
+    }, [user, parsedPieces, selectedPieces, navigate, selectedProjectId]);
 
     const handleCreateNewProjectAndInsertPieces = useCallback(async () => {
         if (!user || !xmlProjectCode || !xmlProjectName) return;
@@ -253,10 +251,29 @@ const PieceRegistry = () => {
         }
         
         toast.success(`Projeto "${xmlProjectName}" criado!`);
-        await handleInsertPiecesToDb(data.id);
+        
+        // Temporarily set selectedProjectId to the new ID to run the insertion
+        setSelectedProjectId(data.id);
+        
+        // We need to call the insertion logic directly but since it depends on state,
+        // we'll replicate the core logic here for the new project ID.
+        const piecesToInsert = parsedPieces.filter(p => selectedPieces.has(p.name));
+        const { error: rpcError } = await supabase.rpc('replace_project_pieces', {
+            p_project_id: data.id,
+            p_user_id: user.id,
+            p_pieces: piecesToInsert
+        });
+
+        if (rpcError) {
+            toast.error(`Erro ao salvar peças no novo projeto: ${rpcError.message}`);
+        } else {
+            toast.success('Peças salvas com sucesso no novo projeto!');
+            navigate(`/projetos/${data.id}`);
+        }
+        
         setIsSavingToDb(false);
 
-    }, [user, xmlProjectCode, xmlProjectName, xmlHeader, handleInsertPiecesToDb]);
+    }, [user, xmlProjectCode, xmlProjectName, xmlHeader, parsedPieces, selectedPieces, navigate]);
 
     const handleTogglePieceSelection = (pieceName: string) => {
         setSelectedPieces(prev => {
@@ -327,7 +344,7 @@ const PieceRegistry = () => {
                                             {projectsList.map(p => <option key={p.id} value={p.id}>{p.name} ({p.project_code})</option>)}
                                         </select>
                                     </div>
-                                    <Button onClick={() => handleInsertPiecesToDb(selectedProjectId!)} disabled={isSavingToDb || !selectedProjectId || !user || selectedPieces.size === 0}>
+                                    <Button onClick={handleSaveRequest} disabled={isSavingToDb || !selectedProjectId || !user || selectedPieces.size === 0}>
                                         {isSavingToDb ? 'Salvando...' : `Salvar ${selectedPieces.size} Peças`}
                                     </Button>
                                 </div>
@@ -391,6 +408,23 @@ const PieceRegistry = () => {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowNewProjectModal(false)}>Cancelar</Button>
                         <Button onClick={handleCreateNewProjectAndInsertPieces} disabled={isSavingToDb}>{isSavingToDb ? 'Criando...' : 'Sim, Criar Projeto'}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirmar Importação</DialogTitle>
+                        <DialogDescription>
+                            Isso substituirá todas as peças existentes neste projeto pelas {selectedPieces.size} peças selecionadas. Deseja continuar?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleInsertPiecesToDb} disabled={isSavingToDb}>
+                            {isSavingToDb ? 'Salvando...' : 'Sim, Substituir'}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
