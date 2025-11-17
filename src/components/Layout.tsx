@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { BarChart, FolderPlus } from 'lucide-react';
+import { BarChart, FolderPlus, LayoutGrid, FileText } from 'lucide-react';
 
 const Sidebar = () => {
     const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
@@ -23,6 +23,14 @@ const Sidebar = () => {
                 <NavLink to="/cadastro-projetos" className={navLinkClasses}>
                     <FolderPlus className="w-5 h-5 mr-3" />
                     Cadastro de Projetos
+                </NavLink>
+                <NavLink to="/projetos" className={navLinkClasses}>
+                    <LayoutGrid className="w-5 h-5 mr-3" />
+                    Projetos
+                </NavLink>
+                <NavLink to="/relatorios" className={navLinkClasses}>
+                    <FileText className="w-5 h-5 mr-3" />
+                    Relatórios
                 </NavLink>
             </nav>
         </aside>
