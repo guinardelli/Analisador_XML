@@ -326,14 +326,14 @@ const Analyzer = () => {
         const allPieces: Piece[] = [];
         const reportNames: string[] = [];
 
-        xmlStrings.forEach((xmlString, index) => {
+        for (const xmlString of xmlStrings) {
             const { header, pieces } = parseSingleXml(xmlString);
             if (!combinedHeader) {
                 combinedHeader = header;
             }
             reportNames.push(header.name);
             allPieces.push(...pieces);
-        });
+        }
 
         if (!combinedHeader || allPieces.length === 0) {
             throw new Error('Nenhum dado válido encontrado nos arquivos selecionados.');
@@ -554,7 +554,7 @@ const Analyzer = () => {
                 title: {
                     display: true,
                     color: titleColor,
-                    font: { size: 16, weight: 'bold' as 'bold' }
+                    font: { size: 16, weight: 'bold' as const }
                 }
             },
             scales: {
