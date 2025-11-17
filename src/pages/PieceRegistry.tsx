@@ -115,15 +115,16 @@ const PieceRegistry = () => {
     const [showNewProjectModal, setShowNewProjectModal] = useState<boolean>(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
-    useEffect(() => {
-        const fetchProjects = async () => {
-            if (!user) return;
-            const { data, error } = await supabase.from('projects').select('id, name, project_code').eq('user_id', user.id).order('name');
-            if (error) toast.error('Falha ao carregar la lista de projetos.');
-            else setProjectsList(data || []);
-        };
-        fetchProjects();
+    const fetchProjects = useCallback(async () => {
+        if (!user) return;
+        const { data, error } = await supabase.from('projects').select('id, name, project_code').eq('user_id', user.id).order('name');
+        if (error) toast.error('Falha ao carregar a lista de projetos.');
+        else setProjectsList(data || []);
     }, [user]);
+
+    useEffect(() => {
+        fetchProjects();
+    }, [fetchProjects]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files ? Array.from(event.target.files) : [];
@@ -231,10 +232,9 @@ const PieceRegistry = () => {
         setIsSavingToDb(false);
     }, [user, parsedPieces, selectedPieces, navigate, selectedProjectId]);
 
-    const handleCreateNewProjectAndInsertPieces = useCallback(async () => {
+    const handleCreateNewProject = useCallback(async () => {
         if (!user || !xmlProjectCode || !xmlProjectName) return;
         setIsSavingToDb(true);
-        setShowNewProjectModal(false);
 
         const { data, error } = await supabase.from('projects').insert({
             name: xmlProjectName,
@@ -242,38 +242,23 @@ const PieceRegistry = () => {
             user_id: user.id,
             client: xmlHeader?.projetista || 'N/A',
             status: 'Programar',
-        }).select('id').single();
+        }).select('id, name, project_code').single();
+
+        setIsSavingToDb(false);
+        setShowNewProjectModal(false);
 
         if (error || !data) {
             toast.error(`Erro ao criar projeto: ${error?.message}`);
-            setIsSavingToDb(false);
             return;
         }
         
-        toast.success(`Projeto "${xmlProjectName}" criado!`);
+        toast.success(`Projeto "${xmlProjectName}" criado com sucesso!`);
         
-        // Temporarily set selectedProjectId to the new ID to run the insertion
+        // Atualiza a lista de projetos e seleciona o novo
+        await fetchProjects();
         setSelectedProjectId(data.id);
-        
-        // We need to call the insertion logic directly but since it depends on state,
-        // we'll replicate the core logic here for the new project ID.
-        const piecesToInsert = parsedPieces.filter(p => selectedPieces.has(p.name));
-        const { error: rpcError } = await supabase.rpc('replace_project_pieces', {
-            p_project_id: data.id,
-            p_user_id: user.id,
-            p_pieces: piecesToInsert
-        });
 
-        if (rpcError) {
-            toast.error(`Erro ao salvar peças no novo projeto: ${rpcError.message}`);
-        } else {
-            toast.success('Peças salvas com sucesso no novo projeto!');
-            navigate(`/projetos/${data.id}`);
-        }
-        
-        setIsSavingToDb(false);
-
-    }, [user, xmlProjectCode, xmlProjectName, xmlHeader, parsedPieces, selectedPieces, navigate]);
+    }, [user, xmlProjectCode, xmlProjectName, xmlHeader, fetchProjects]);
 
     const handleTogglePieceSelection = (pieceName: string) => {
         setSelectedPieces(prev => {
@@ -407,7 +392,7 @@ const PieceRegistry = () => {
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowNewProjectModal(false)}>Cancelar</Button>
-                        <Button onClick={handleCreateNewProjectAndInsertPieces} disabled={isSavingToDb}>{isSavingToDb ? 'Criando...' : 'Sim, Criar Projeto'}</Button>
+                        <Button onClick={handleCreateNewProject} disabled={isSavingToDb}>{isSavingToDb ? 'Criando...' : 'Sim, Criar Projeto'}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

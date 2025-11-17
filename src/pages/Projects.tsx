@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface Project {
     id: string;
@@ -23,6 +25,7 @@ const Projects = () => {
     const [loading, setLoading] = useState(true);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+    const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -50,11 +53,15 @@ const Projects = () => {
 
     const handleDeleteRequest = (project: Project) => {
         setProjectToDelete(project);
+        setDeleteConfirmationInput('');
         setIsDeleteDialogOpen(true);
     };
 
     const handleDeleteConfirm = async () => {
-        if (!projectToDelete) return;
+        if (!projectToDelete || deleteConfirmationInput !== projectToDelete.name) {
+            toast.error("O nome do projeto não corresponde.");
+            return;
+        }
 
         const { error } = await supabase
             .from('projects')
@@ -137,12 +144,27 @@ const Projects = () => {
                     <DialogHeader>
                         <DialogTitle>Confirmar Exclusão</DialogTitle>
                         <DialogDescription>
-                            Tem certeza que deseja excluir o projeto "{projectToDelete?.name}"? Esta ação não pode ser desfeita e todas as peças associadas serão removidas.
+                            Esta ação não pode ser desfeita. Para confirmar, digite <strong>{projectToDelete?.name}</strong> no campo abaixo.
                         </DialogDescription>
                     </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="delete-confirm">Nome do Projeto</Label>
+                        <Input 
+                            id="delete-confirm"
+                            value={deleteConfirmationInput}
+                            onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                            placeholder="Digite o nome do projeto"
+                        />
+                    </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</Button>
-                        <Button variant="destructive" onClick={handleDeleteConfirm}>Excluir</Button>
+                        <Button 
+                            variant="destructive" 
+                            onClick={handleDeleteConfirm}
+                            disabled={deleteConfirmationInput !== projectToDelete?.name}
+                        >
+                            Excluir
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
