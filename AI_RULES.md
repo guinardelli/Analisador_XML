@@ -30,4 +30,4 @@ This document outlines the rules and conventions for AI-driven development of th
 *   **Idioma do aplicativo**: português brasileiro
 *   **Capacidade da IA**: Utilize toda sua capacidade para chegar no melhor resultado.
 *   **Importante**: Evite mudar o que eu não solicitei, apenas se necessário.
-*   **Verifique**: Sempre que fizer uma mudança verifique o impacto em outras 
+*   **Verifique**: Sempre que fizer uma mudança verifique o impacto em outras partes do aplicativo para garantir a consistência.
