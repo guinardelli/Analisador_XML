@@ -403,7 +403,7 @@ const Analyzer = () => {
                 totalVolume += p.volume * p.quantity;
                 totalLengthWeighted += pieceLength * p.quantity;
                 if (p.weight > maxWeight) maxWeight = p.weight;
-                if (pieceLength > maxLength) maxLength = p.length;
+                if (pieceLength > maxLength) maxLength = pieceLength;
             });
 
             const avgWeight = totalPieces > 0 ? totalWeight / totalPieces : 0;
@@ -554,7 +554,7 @@ const Analyzer = () => {
                 title: {
                     display: true,
                     color: titleColor,
-                    font: { size: 16, weight: 'bold' }
+                    font: { size: 16, weight: 'bold' as 'bold' }
                 }
             },
             scales: {
