@@ -1,27 +1,31 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Projects from './pages/Projects';
+import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+import SessionContextProvider from './components/SessionContextProvider';
+import PieceRegistry from './pages/PieceRegistry';
+import Reports from './pages/Reports';
 
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <div style={{ padding: '2rem', textAlign: 'center', fontFamily: 'sans-serif', color: '#333' }}>
-      <h1 style={{ marginBottom: '1rem' }}>Aplicativo React</h1>
-      <p style={{ marginBottom: '1rem', fontSize: '1.2rem' }}>Contagem atual: {count}</p>
-      <button 
-        onClick={() => setCount(count + 1)}
-        style={{ 
-          padding: '0.5rem 1.5rem', 
-          fontSize: '1rem', 
-          cursor: 'pointer',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px'
-        }}
-      >
-        Incrementar
-      </button>
-    </div>
+    <SessionContextProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/registry" element={<PieceRegistry />} />
+              <Route path="/reports" element={<Reports />} />
+            </Route>
+          </Route>
+        </Routes>
+      </Router>
+    </SessionContextProvider>
   );
 }
 
