@@ -23,9 +23,9 @@ interface GroupedPiece {
     quantity: number;
     section: string;
     length: number;
-    weight: number;
+    weight: number | null;
     unit_volume: number;
-    concrete_class: string;
+    concrete_class: string | null;
     piece_ids: string[] | null;
 }
 
@@ -35,9 +35,9 @@ interface IndividualPiece {
     group: string;
     section: string;
     length: number;
-    weight: number;
+    weight: number | null;
     unit_volume: number;
-    concrete_class: string;
+    concrete_class: string | null;
     is_released: boolean;
 }
 
@@ -125,7 +125,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
             const nameMatch = filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
             const groupMatch = filters.group.length > 0 ? filters.group.includes(piece.group) : true;
             const sectionMatch = filters.section.length > 0 ? filters.section.includes(piece.section) : true;
-            const concreteClassMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
+            const concreteClassMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class || '') : true;
             return nameMatch && groupMatch && sectionMatch && concreteClassMatch;
         });
 
@@ -136,7 +136,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
             return;
         }
 
-        const totalWeight = filtered.reduce((sum, p) => sum + p.weight, 0);
+        const totalWeight = filtered.reduce((sum, p) => sum + (p.weight || 0), 0);
         const totalVolume = filtered.reduce((sum, p) => sum + p.unit_volume, 0);
         const totalLength = filtered.reduce((sum, p) => sum + p.length, 0);
         const releasedCount = filtered.filter(p => p.is_released).length;
@@ -147,7 +147,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
             totalWeight,
             totalVolume,
             avgWeight: totalWeight / totalPieces,
-            maxWeight: Math.max(...filtered.map(p => p.weight)),
+            maxWeight: Math.max(...filtered.map(p => p.weight || 0)),
             avgLength: totalLength / totalPieces,
             maxLength: Math.max(...filtered.map(p => p.length)),
             releasedCount,
@@ -162,13 +162,13 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
 
         const piecesForGroup = allIndividualPieces.filter(p =>
             (section.length === 0 || section.includes(p.section)) &&
-            (concrete_class.length === 0 || concrete_class.includes(p.concrete_class))
+            (concrete_class.length === 0 || concrete_class.includes(p.concrete_class || ''))
         );
         const newGroups = [...new Set(piecesForGroup.map(p => p.group))].sort();
 
         const piecesForSection = allIndividualPieces.filter(p =>
             (group.length === 0 || group.includes(p.group)) &&
-            (concrete_class.length === 0 || concrete_class.includes(p.concrete_class))
+            (concrete_class.length === 0 || concrete_class.includes(p.concrete_class || ''))
         );
         const newSections = [...new Set(piecesForSection.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
 
@@ -176,7 +176,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
             (group.length === 0 || group.includes(p.group)) &&
             (section.length === 0 || section.includes(p.section))
         );
-        const newConcreteClasses = [...new Set(piecesForConcrete.map(p => p.concrete_class))].sort();
+        const newConcreteClasses = [...new Set(piecesForConcrete.map(p => p.concrete_class).filter(Boolean) as string[])].sort();
 
         setAvailableOptions({
             groups: newGroups,
@@ -196,9 +196,9 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
                 if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
                     comparison = aValue === bValue ? 0 : aValue ? -1 : 1;
                 } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-                    comparison = aValue - bValue;
+                    comparison = (aValue || 0) - (bValue || 0);
                 } else {
-                    comparison = String(aValue).localeCompare(String(bValue), undefined, { numeric: true });
+                    comparison = String(aValue || '').localeCompare(String(bValue || ''), undefined, { numeric: true });
                 }
                 return sortConfig.direction === 'ascending' ? comparison : -comparison;
             });
@@ -276,10 +276,10 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
     const heaviestPartsData = useMemo(() => {
         if (displayedPieces.length === 0) return null;
         const uniquePieceTypes = Array.from(new Map(displayedPieces.map(p => [p.name, p])).values());
-        const top10Heaviest = uniquePieceTypes.sort((a, b) => b.weight - a.weight).slice(0, 10);
+        const top10Heaviest = uniquePieceTypes.sort((a, b) => (b.weight || 0) - (a.weight || 0)).slice(0, 10);
         return {
             labels: top10Heaviest.map(p => p.name),
-            datasets: [{ label: 'Peso (kg)', data: top10Heaviest.map(p => p.weight), backgroundColor: '#fcc200', borderColor: '#e3af00', borderWidth: 1 }]
+            datasets: [{ label: 'Peso (kg)', data: top10Heaviest.map(p => p.weight || 0), backgroundColor: '#fcc200', borderColor: '#e3af00', borderWidth: 1 }]
         };
     }, [displayedPieces]);
     
@@ -364,9 +364,9 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
                                     <td className="px-6 py-4">{piece.group}</td>
                                     <td className="px-6 py-4">{piece.section}</td>
                                     <td className="px-6 py-4 text-right">{formatNumber(piece.length / 100, {minimumFractionDigits: 2})}</td>
-                                    <td className="px-6 py-4 text-right">{formatNumber(piece.weight, {minimumFractionDigits: 2})}</td>
+                                    <td className="px-6 py-4 text-right">{piece.weight ? formatNumber(piece.weight, {minimumFractionDigits: 2}) : 'N/A'}</td>
                                     <td className="px-6 py-4 text-right">{formatNumber(piece.unit_volume, {minimumFractionDigits: 4})}</td>
-                                    <td className="px-6 py-4">{piece.concrete_class}</td>
+                                    <td className="px-6 py-4">{piece.concrete_class || 'N/A'}</td>
                                 </tr>
                             ))}
                         </tbody>
