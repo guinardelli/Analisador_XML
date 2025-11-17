@@ -133,7 +133,7 @@ const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: Piece[]
 
 
 // --- MAIN APP COMPONENT ---
-const Analyzer = () => {
+const PieceRegistry = () => {
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [fileInfoText, setFileInfoText] = useState<string>('');
     const [originalData, setOriginalData] = useState<ParsedXmlData | null>(null);
@@ -596,8 +596,8 @@ const Analyzer = () => {
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
             <div className="max-w-6xl mx-auto">
                 <header className="text-center mb-10">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-text-primary">Analisador de XML</h1>
-                    <p className="mt-3 text-base sm:text-lg text-text-secondary max-w-3xl mx-auto">Carregue arquivos .xml do Tekla ou um arquivo de sessão .json para análise</p>
+                    <h1 className="text-3xl sm:text-4xl font-bold text-text-primary">Cadastro de Peças</h1>
+                    <p className="mt-3 text-base sm:text-lg text-text-secondary max-w-3xl mx-auto">Carregue arquivos .xml do Tekla para cadastrar as peças de um projeto.</p>
                 </header>
 
                 <div className="bg-surface rounded-xl shadow-md border border-border-default p-6 mb-8 sticky top-4 z-10">
@@ -827,4 +827,4 @@ const Analyzer = () => {
     );
 };
 
-export default Analyzer;
+export default PieceRegistry;

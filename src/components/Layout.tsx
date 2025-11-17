@@ -28,7 +28,7 @@ const Sidebar = () => {
                     <Home className="w-5 h-5 mr-3" />
                     Início
                 </NavLink>
-                <NavLink to="/analisador" className={navLinkClasses}>
+                <NavLink to="/cadastro" className={navLinkClasses}>
                     <Boxes className="w-5 h-5 mr-3" />
                     Cadastrar Peças
                 </NavLink>
