@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Pie, Bar } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -10,6 +10,15 @@ import {
     BarElement,
     Title,
 } from 'chart.js';
+import { supabase } from '@/integrations/supabase/client';
+import { useSession } from '@/components/SessionContextProvider';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 // --- CHART.JS REGISTRATION ---
 ChartJS.register(
@@ -22,17 +31,16 @@ ChartJS.register(
     Title
 );
 
-
 // --- TYPE DEFINITIONS ---
 interface Piece {
     name: string;
-    type: string;
+    type: string; // Maps to 'group' in DB
     quantity: number;
     section: string;
-    length: string;
-    weight: number;
-    volume: number;
-    concreteClass: string;
+    length: number; // Changed from string to number
+    weight: number; // New column
+    unit_volume: number; // Changed from 'volume' to 'unit_volume'
+    concreteClass: string; // New column, maps to 'concrete_class' in DB
 }
 
 interface XmlHeader {
@@ -72,6 +80,16 @@ interface SessionData {
     stagedFilters: Filters;
     releasedPieces: string[]; // Set is not serializable, so we use an array
     fileInfoText: string;
+    selectedProjectId: string | null; // Store selected project ID
+}
+
+interface Project {
+    id: string;
+    name: string;
+    project_code: string;
+    client: string;
+    status: string;
+    total_volume: number;
 }
 
 // --- HELPER FUNCTIONS ---
@@ -114,16 +132,17 @@ const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: Piece[]
     const pieces: Piece[] = pieceElements.map(p => {
         const quantity = parseInt(getElementTextContent(p, 'QUANTIDADE'), 10) || 0;
         const weight = parseSafeFloat(getElementTextContent(p, 'PESO'));
-        const volume = parseSafeFloat(getElementTextContent(p, 'VOLUMEUNITARIO'));
+        const unit_volume = parseSafeFloat(getElementTextContent(p, 'VOLUMEUNITARIO'));
+        const length = parseSafeFloat(getElementTextContent(p, 'COMPRIMENTO')); // Convert length to number
 
         return {
             name: getElementTextContent(p, 'NOMEPECA'),
             type: getElementTextContent(p, 'TIPOPRODUTO'),
             quantity,
             section: getElementTextContent(p, 'SECAO'),
-            length: getElementTextContent(p, 'COMPRIMENTO'),
+            length, // Now a number
             weight,
-            volume,
+            unit_volume, // Now unit_volume
             concreteClass: getElementTextContent(p, 'CLASSECONCRETO'),
         };
     });
@@ -134,12 +153,16 @@ const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: Piece[]
 
 // --- MAIN APP COMPONENT ---
 const PieceRegistry = () => {
+    const { user } = useSession();
+    const navigate = useNavigate();
+
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [fileInfoText, setFileInfoText] = useState<string>('');
     const [originalData, setOriginalData] = useState<ParsedXmlData | null>(null);
     const [displayedData, setDisplayedData] = useState<ParsedXmlData | null>(null);
     const [error, setError] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isSavingToDb, setIsSavingToDb] = useState<boolean>(false);
     
     const initialFilters: Filters = { name: '', type: [], section: [], concreteClass: [] };
     const [filters, setFilters] = useState<Filters>(initialFilters); // Applied filters
@@ -152,7 +175,36 @@ const PieceRegistry = () => {
         sections: [] as string[],
         concreteClasses: [] as string[],
     });
-    
+
+    // Project management states
+    const [projectsList, setProjectsList] = useState<Project[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+    const [xmlProjectCode, setXmlProjectCode] = useState<string | null>(null);
+    const [xmlProjectName, setXmlProjectName] = useState<string | null>(null);
+    const [showNewProjectModal, setShowNewProjectModal] = useState<boolean>(false);
+    const [parsedPiecesForDb, setParsedPiecesForDb] = useState<Piece[]>([]);
+    const [currentProjectStatus, setCurrentProjectStatus] = useState<string | null>(null);
+
+    // Fetch projects on component mount
+    useEffect(() => {
+        const fetchProjects = async () => {
+            if (!user) return;
+            const { data, error } = await supabase
+                .from('projects')
+                .select('id, name, project_code, client, status, total_volume')
+                .eq('user_id', user.id)
+                .order('name', { ascending: true });
+
+            if (error) {
+                console.error('Erro ao buscar projetos:', error.message);
+                toast.error('Falha ao carregar a lista de projetos.');
+            } else {
+                setProjectsList(data || []);
+            }
+        };
+        fetchProjects();
+    }, [user]);
+
     // Effect for applying filters to the displayed data
     useEffect(() => {
         if (!originalData) return;
@@ -173,16 +225,15 @@ const PieceRegistry = () => {
         let maxWeight = 0;
 
         filteredPieces.forEach(p => {
-            const pieceLength = parseSafeFloat(p.length);
             totalPieces += p.quantity;
             totalWeight += p.weight * p.quantity;
-            totalVolume += p.volume * p.quantity;
-            totalLengthWeighted += pieceLength * p.quantity;
+            totalVolume += p.unit_volume * p.quantity;
+            totalLengthWeighted += p.length * p.quantity;
             if (p.weight > maxWeight) {
                 maxWeight = p.weight;
             }
-            if (pieceLength > maxLength) {
-                maxLength = pieceLength;
+            if (p.length > maxLength) {
+                maxLength = p.length;
             }
         });
 
@@ -252,10 +303,8 @@ const PieceRegistry = () => {
 
                 let comparison = 0;
                 
-                if (['quantity', 'weight', 'volume'].includes(sortConfig.key!)) {
+                if (['quantity', 'weight', 'unit_volume', 'length'].includes(sortConfig.key!)) {
                     comparison = (aValue as number) - (bValue as number);
-                } else if (sortConfig.key === 'length') {
-                     comparison = parseSafeFloat(aValue as string) - parseSafeFloat(bValue as string);
                 } else {
                     const numericSort = ['name', 'section'].includes(sortConfig.key!);
                     comparison = String(aValue).localeCompare(String(bValue), undefined, { numeric: numericSort });
@@ -269,7 +318,6 @@ const PieceRegistry = () => {
     }, [displayedData?.pieces, sortConfig]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        // FIX: Explicitly cast to File[] to handle environments where type inference for FileList is incorrect.
         const files = (event.target.files ? Array.from(event.target.files) : []) as File[];
         if (files.length === 0) return;
 
@@ -308,6 +356,10 @@ const PieceRegistry = () => {
         setFileInfoText(infoText);
         setOriginalData(null);
         setDisplayedData(null);
+        setSelectedProjectId(null); // Reset project selection
+        setXmlProjectCode(null);
+        setXmlProjectName(null);
+        setCurrentProjectStatus(null);
     };
 
     const processXmlFiles = async () => {
@@ -359,12 +411,12 @@ const PieceRegistry = () => {
         setStagedFilters(sessionData.stagedFilters);
         setReleasedPieces(new Set(sessionData.releasedPieces));
         setFileInfoText(sessionData.fileInfoText); // Restore original file info
+        setSelectedProjectId(sessionData.selectedProjectId); // Restore selected project ID
         
         return sessionData.originalData;
     }
 
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleProcessFiles = async () => {
         if (selectedFiles.length === 0) {
             setError('Nenhum arquivo válido selecionado.');
             return;
@@ -374,12 +426,17 @@ const PieceRegistry = () => {
         setError('');
         setOriginalData(null);
         setDisplayedData(null);
-        // Reset state only if processing XML, not JSON
+        setParsedPiecesForDb([]); // Clear pieces for DB insertion
+
         const isJsonImport = selectedFiles.length === 1 && selectedFiles[0].name.endsWith('.json');
         if (!isJsonImport) {
             setFilters(initialFilters);
             setStagedFilters(initialFilters);
             setReleasedPieces(new Set());
+            setSelectedProjectId(null); // Reset project selection for XML
+            setXmlProjectCode(null);
+            setXmlProjectName(null);
+            setCurrentProjectStatus(null);
         }
 
         try {
@@ -397,13 +454,12 @@ const PieceRegistry = () => {
             let totalPieces = 0, totalWeight = 0, totalVolume = 0, totalLengthWeighted = 0, maxLength = 0, maxWeight = 0;
 
             dataToProcess.pieces.forEach(p => {
-                const pieceLength = parseSafeFloat(p.length);
                 totalPieces += p.quantity;
                 totalWeight += p.weight * p.quantity;
-                totalVolume += p.volume * p.quantity;
-                totalLengthWeighted += pieceLength * p.quantity;
+                totalVolume += p.unit_volume * p.quantity;
+                totalLengthWeighted += p.length * p.quantity;
                 if (p.weight > maxWeight) maxWeight = p.weight;
-                if (pieceLength > maxLength) maxLength = pieceLength;
+                if (p.length > maxLength) maxLength = p.length;
             });
 
             const avgWeight = totalPieces > 0 ? totalWeight / totalPieces : 0;
@@ -412,15 +468,145 @@ const PieceRegistry = () => {
             const summary: SummaryData = { totalPieces, totalWeight, totalVolume, avgWeight, maxWeight, avgLength, maxLength };
             const fullData = { ...dataToProcess, summary };
             setOriginalData(fullData);
-            // setDisplayedData is handled by the useEffect hook watching originalData and filters
+            setParsedPiecesForDb(fullData.pieces); // Store for DB insertion
+
+            if (!isJsonImport && fullData.header.obra !== 'N/A') {
+                const existingProject = projectsList.find(p => p.project_code === fullData.header.obra);
+                if (existingProject) {
+                    setSelectedProjectId(existingProject.id);
+                    setCurrentProjectStatus(existingProject.status);
+                    toast.success(`Projeto "${existingProject.name}" (${existingProject.project_code}) selecionado automaticamente.`);
+                } else {
+                    setXmlProjectCode(fullData.header.obra);
+                    setXmlProjectName(fullData.header.name);
+                    setShowNewProjectModal(true);
+                }
+            } else if (isJsonImport && sessionData.selectedProjectId) {
+                const project = projectsList.find(p => p.id === sessionData.selectedProjectId);
+                if (project) {
+                    setCurrentProjectStatus(project.status);
+                }
+            }
+
         } catch (e) {
             const message = e instanceof Error ? e.message : String(e);
             setError(`Erro ao processar arquivo: ${message}` || 'Ocorreu um erro desconhecido.');
             setOriginalData(null);
             setDisplayedData(null);
+            setParsedPiecesForDb([]);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleInsertPiecesToDb = useCallback(async (projectId: string, pieces: Piece[], userId: string) => {
+        setIsSavingToDb(true);
+        setError(null);
+        try {
+            // Delete existing pieces for this project to avoid duplicates
+            const { error: deleteError } = await supabase
+                .from('pieces')
+                .delete()
+                .eq('project_id', projectId);
+
+            if (deleteError) {
+                throw new Error(`Erro ao limpar peças existentes: ${deleteError.message}`);
+            }
+
+            const piecesToInsert = pieces.map(piece => ({
+                project_id: projectId,
+                user_id: userId,
+                name: piece.name,
+                group: piece.type, // Mapping 'type' from XML to 'group' in DB
+                quantity: piece.quantity,
+                section: piece.section,
+                length: piece.length,
+                unit_volume: piece.unit_volume,
+                weight: piece.weight,
+                concrete_class: piece.concreteClass,
+            }));
+
+            const { error: insertError } = await supabase
+                .from('pieces')
+                .insert(piecesToInsert);
+
+            if (insertError) {
+                throw new Error(`Erro ao inserir peças: ${insertError.message}`);
+            }
+
+            // Calculate total volume for the project
+            const totalProjectVolume = pieces.reduce((sum, p) => sum + (p.unit_volume * p.quantity), 0);
+
+            // Update project's total_volume
+            const { error: updateProjectError } = await supabase
+                .from('projects')
+                .update({ total_volume: totalProjectVolume })
+                .eq('id', projectId);
+
+            if (updateProjectError) {
+                console.error('Erro ao atualizar volume total do projeto:', updateProjectError.message);
+                toast.error('Peças salvas, mas falha ao atualizar o volume total do projeto.');
+            }
+
+            toast.success('Peças salvas com sucesso no projeto!');
+            navigate(`/projetos/${projectId}`); // Navigate to project details
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Erro desconhecido ao salvar peças.';
+            setError(message);
+            toast.error(message);
+        } finally {
+            setIsSavingToDb(false);
+        }
+    }, [navigate]);
+
+    const handleCreateNewProjectAndInsertPieces = useCallback(async () => {
+        if (!user || !xmlProjectCode || !xmlProjectName || parsedPiecesForDb.length === 0) {
+            setError('Dados insuficientes para criar projeto e salvar peças.');
+            return;
+        }
+
+        setIsSavingToDb(true);
+        setError(null);
+        setShowNewProjectModal(false);
+
+        try {
+            const { data, error: insertProjectError } = await supabase
+                .from('projects')
+                .insert({
+                    name: xmlProjectName,
+                    project_code: xmlProjectCode,
+                    user_id: user.id,
+                    client: originalData?.header.obra || 'N/A', // Use obra as client if available
+                    description: `Projeto gerado automaticamente a partir do XML: ${originalData?.header.name || ''}`,
+                    status: 'Programar', // Default status
+                })
+                .select('id')
+                .single();
+
+            if (insertProjectError || !data) {
+                throw new Error(`Erro ao criar novo projeto: ${insertProjectError?.message || 'Nenhum ID de projeto retornado.'}`);
+            }
+
+            const newProjectId = data.id;
+            toast.success(`Novo projeto "${xmlProjectName}" (${xmlProjectCode}) criado com sucesso!`);
+            setSelectedProjectId(newProjectId);
+            setCurrentProjectStatus('Programar');
+            setProjectsList(prev => [...prev, { id: newProjectId, name: xmlProjectName, project_code: xmlProjectCode, client: originalData?.header.obra || 'N/A', status: 'Programar', total_volume: 0 }]);
+
+            await handleInsertPiecesToDb(newProjectId, parsedPiecesForDb, user.id);
+
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Erro desconhecido ao criar projeto e salvar peças.';
+            setError(message);
+            toast.error(message);
+        } finally {
+            setIsSavingToDb(false);
+        }
+    }, [user, xmlProjectCode, xmlProjectName, parsedPiecesForDb, originalData?.header.obra, originalData?.header.name, handleInsertPiecesToDb]);
+
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        await handleProcessFiles();
     };
     
     const handleExport = () => {
@@ -433,6 +619,7 @@ const PieceRegistry = () => {
             stagedFilters,
             releasedPieces: Array.from(releasedPieces),
             fileInfoText,
+            selectedProjectId, // Include selected project ID in export
         };
 
         const jsonString = JSON.stringify(sessionData, null, 2);
@@ -627,8 +814,8 @@ const PieceRegistry = () => {
                 {displayedData && (
                     <div className="space-y-8 animate-fade-in">
                         <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
-                            <div className="flex justify-between items-start">
-                                <div>
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div className="flex-grow">
                                     <h2 className="text-xl font-bold text-text-primary mb-4">Informações do Projeto</h2>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
                                         <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Obra</span><span className="text-lg text-text-primary mt-1">{displayedData.header.obra}</span></div>
@@ -636,17 +823,84 @@ const PieceRegistry = () => {
                                         <div className="flex flex-col"><span className="text-sm font-medium text-text-secondary">Projetista</span><span className="text-lg text-text-primary mt-1">{displayedData.header.projetista}</span></div>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={handleExport}
-                                    className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-md transition-colors text-sm flex items-center gap-2 flex-shrink-0"
-                                    title="Salvar sessão atual em um arquivo .json"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                    <span>Exportar</span>
-                                </button>
+                                <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-0 flex-shrink-0">
+                                    <button
+                                        onClick={handleExport}
+                                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-md transition-colors text-sm flex items-center justify-center gap-2"
+                                        title="Salvar sessão atual em um arquivo .json"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                        <span>Exportar Sessão</span>
+                                    </button>
+                                    <Button
+                                        onClick={() => {
+                                            if (!user) {
+                                                toast.error('Você precisa estar logado para salvar peças.');
+                                                return;
+                                            }
+                                            if (!selectedProjectId) {
+                                                toast.error('Por favor, selecione ou crie um projeto antes de salvar as peças.');
+                                                return;
+                                            }
+                                            handleInsertPiecesToDb(selectedProjectId, parsedPiecesForDb, user.id);
+                                        }}
+                                        disabled={isSavingToDb || !selectedProjectId || !user || parsedPiecesForDb.length === 0}
+                                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors text-sm flex items-center justify-center gap-2"
+                                    >
+                                        {isSavingToDb && <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                                        <span>{isSavingToDb ? 'Salvando...' : 'Salvar Peças no Projeto'}</span>
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-                        
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Associar Peças a um Projeto</CardTitle>
+                                <CardDescription>Selecione um projeto existente ou crie um novo para salvar as peças processadas.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="project-select">Projeto Existente</Label>
+                                        <select
+                                            id="project-select"
+                                            className="w-full bg-surface border border-border-default rounded-md p-2 text-sm focus:ring-primary focus:border-primary"
+                                            value={selectedProjectId || ''}
+                                            onChange={(e) => {
+                                                setSelectedProjectId(e.target.value);
+                                                const project = projectsList.find(p => p.id === e.target.value);
+                                                setCurrentProjectStatus(project?.status || null);
+                                            }}
+                                            disabled={!user || isLoading || isSavingToDb}
+                                        >
+                                            <option value="">Selecione um projeto</option>
+                                            {projectsList.map(project => (
+                                                <option key={project.id} value={project.id}>
+                                                    {project.name} ({project.project_code}) - Status: {project.status}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Status do Projeto Selecionado</Label>
+                                        <Input
+                                            value={currentProjectStatus || 'N/A'}
+                                            readOnly
+                                            className="bg-background text-text-secondary"
+                                        />
+                                    </div>
+                                </div>
+                                {selectedProjectId && (
+                                    <p className="text-sm text-text-subtle mt-4">
+                                        As peças serão salvas no projeto: <span className="font-medium text-text-primary">
+                                            {projectsList.find(p => p.id === selectedProjectId)?.name}
+                                        </span>. Peças existentes neste projeto serão substituídas.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+
                         <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
                             <h2 className="text-xl font-bold text-text-primary mb-6">Filtros</h2>
                             <div className="flex flex-col gap-6">
@@ -774,7 +1028,7 @@ const PieceRegistry = () => {
                                             <SortableHeader label="Seção" sortKey="section" />
                                             <SortableHeader label="Comprimento (m)" sortKey="length" align="right" />
                                             <SortableHeader label="Peso (kg)" sortKey="weight" align="right" />
-                                            <SortableHeader label="Volume (m³)" sortKey="volume" align="right" />
+                                            <SortableHeader label="Volume (m³)" sortKey="unit_volume" align="right" />
                                             <SortableHeader label="Concreto" sortKey="concreteClass" />
                                         </tr>
                                     </thead>
@@ -794,9 +1048,9 @@ const PieceRegistry = () => {
                                                 <td className="px-6 py-4">{piece.type}</td>
                                                 <td className="px-6 py-4 text-center">{piece.quantity}</td>
                                                 <td className="px-6 py-4">{piece.section}</td>
-                                                <td className="px-6 py-4 text-right">{formatNumber(parseSafeFloat(piece.length) / 100, {minimumFractionDigits: 2})}</td>
+                                                <td className="px-6 py-4 text-right">{formatNumber(piece.length / 100, {minimumFractionDigits: 2})}</td>
                                                 <td className="px-6 py-4 text-right">{formatNumber(piece.weight, {minimumFractionDigits: 2})}</td>
-                                                <td className="px-6 py-4 text-right">{formatNumber(piece.volume, {minimumFractionDigits: 4})}</td>
+                                                <td className="px-6 py-4 text-right">{formatNumber(piece.unit_volume, {minimumFractionDigits: 4})}</td>
                                                 <td className="px-6 py-4">{piece.concreteClass}</td>
                                             </tr>
                                         ))}
@@ -823,6 +1077,43 @@ const PieceRegistry = () => {
                     </div>
                 )}
             </div>
+
+            {/* Modal para criar novo projeto */}
+            <Dialog open={showNewProjectModal} onOpenChange={setShowNewProjectModal}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Projeto Não Encontrado</DialogTitle>
+                        <DialogDescription>
+                            O código da obra <span className="font-semibold text-text-primary">"{xmlProjectCode}"</span> do arquivo XML não corresponde a nenhum projeto existente.
+                            Deseja criar um novo projeto com este código e nome sugerido?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="new-project-name">Nome do Projeto Sugerido</Label>
+                            <Input id="new-project-name" value={xmlProjectName || ''} readOnly className="bg-background" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="new-project-code">Código da Obra</Label>
+                            <Input id="new-project-code" value={xmlProjectCode || ''} readOnly className="bg-background" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                            setShowNewProjectModal(false);
+                            setError('Criação de projeto cancelada. Selecione um projeto existente ou carregue outro arquivo.');
+                            setOriginalData(null);
+                            setDisplayedData(null);
+                            setParsedPiecesForDb([]);
+                        }}>
+                            Não, Cancelar
+                        </Button>
+                        <Button onClick={handleCreateNewProjectAndInsertPieces} disabled={isSavingToDb}>
+                            {isSavingToDb ? 'Criando...' : 'Sim, Criar Projeto'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
