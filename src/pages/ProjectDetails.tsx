@@ -33,6 +33,7 @@ interface Piece {
     weight: number;
     unit_volume: number;
     concrete_class: string;
+    piece_ids: string[] | null;
 }
 
 const ProjectDetails = () => {
@@ -170,7 +171,7 @@ const ProjectDetails = () => {
                     </CardContent>
                 </Card>
 
-                <PiecesViewer initialPieces={pieces} />
+                {projectId && <PiecesViewer initialPieces={pieces} projectId={projectId} />}
             </div>
         </div>
     );

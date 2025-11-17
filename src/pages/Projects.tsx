@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { Link } from 'react-router-dom';
-import { Trash2, Building, Activity, Package } from 'lucide-react';
+import { Trash2, Building, Activity, Package, LayoutGrid, List } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,14 @@ interface Project {
 }
 
 const Projects = () => {
-    const [projects, setProjects] = useState<Project[]>([]);
+    const [allProjects, setAllProjects] = useState<Project[]>([]);
+    const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
     const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -42,7 +45,8 @@ const Projects = () => {
                     console.error('Error fetching projects:', error);
                     toast.error('Falha ao carregar os projetos.');
                 } else {
-                    setProjects(data || []);
+                    setAllProjects(data || []);
+                    setFilteredProjects(data || []);
                 }
             }
             setLoading(false);
@@ -50,6 +54,18 @@ const Projects = () => {
 
         fetchProjects();
     }, []);
+
+    useEffect(() => {
+        const lowercasedFilter = searchTerm.toLowerCase();
+        const filtered = allProjects.filter(project => {
+            return (
+                project.name.toLowerCase().includes(lowercasedFilter) ||
+                (project.project_code && project.project_code.toLowerCase().includes(lowercasedFilter)) ||
+                (project.client && project.client.toLowerCase().includes(lowercasedFilter))
+            );
+        });
+        setFilteredProjects(filtered);
+    }, [searchTerm, allProjects]);
 
     const handleDeleteRequest = (project: Project) => {
         setProjectToDelete(project);
@@ -73,7 +89,9 @@ const Projects = () => {
             console.error('Error deleting project:', error);
         } else {
             toast.success(`Projeto "${projectToDelete.name}" excluído com sucesso!`);
-            setProjects(projects.filter(p => p.id !== projectToDelete.id));
+            const updatedProjects = allProjects.filter(p => p.id !== projectToDelete.id);
+            setAllProjects(updatedProjects);
+            setFilteredProjects(updatedProjects);
         }
         
         setIsDeleteDialogOpen(false);
@@ -86,25 +104,48 @@ const Projects = () => {
 
     return (
         <div className="p-4 md:p-8">
-            <div className="mb-6 flex justify-between items-center">
-                <h1 className="text-3xl font-bold">Meus Projetos</h1>
+            <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold">Meus Projetos</h1>
+                    <p className="text-text-secondary mt-1">Visualize e gerencie todos os seus projetos.</p>
+                </div>
                 <Button asChild>
                     <Link to="/cadastro-projetos">Novo Projeto</Link>
                 </Button>
             </div>
 
-            {projects.length === 0 ? (
-                <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                    <p className="text-gray-500">Nenhum projeto encontrado.</p>
-                    <p className="mt-2">
-                        <Link to="/cadastro-projetos" className="text-primary hover:underline">
-                            Crie seu primeiro projeto
-                        </Link>
-                    </p>
+            <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4 p-4 bg-surface rounded-lg border">
+                <Input 
+                    placeholder="Filtrar por nome, código ou cliente..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm w-full"
+                />
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-text-secondary">Visualizar como:</span>
+                    <Button variant={viewMode === 'card' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('card')}>
+                        <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
+                        <List className="h-4 w-4" />
+                    </Button>
                 </div>
-            ) : (
+            </div>
+
+            {filteredProjects.length === 0 ? (
+                <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                    <p className="text-gray-500">{searchTerm ? 'Nenhum projeto encontrado com os filtros aplicados.' : 'Nenhum projeto encontrado.'}</p>
+                    {!searchTerm && (
+                        <p className="mt-2">
+                            <Link to="/cadastro-projetos" className="text-primary hover:underline">
+                                Crie seu primeiro projeto
+                            </Link>
+                        </p>
+                    )}
+                </div>
+            ) : viewMode === 'card' ? (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {projects.map(project => (
+                    {filteredProjects.map(project => (
                         <Card key={project.id} className="flex flex-col">
                             <CardHeader>
                                 <CardTitle className="hover:text-primary transition-colors">
@@ -137,6 +178,43 @@ const Projects = () => {
                         </Card>
                     ))}
                 </div>
+            ) : (
+                <Card>
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50">
+                                    <tr>
+                                        <th className="p-4 text-left font-semibold text-text-secondary">Nome do Projeto</th>
+                                        <th className="p-4 text-left font-semibold text-text-secondary">Código</th>
+                                        <th className="p-4 text-left font-semibold text-text-secondary">Cliente</th>
+                                        <th className="p-4 text-left font-semibold text-text-secondary">Status</th>
+                                        <th className="p-4 text-right font-semibold text-text-secondary">Volume (m³)</th>
+                                        <th className="p-4 text-right font-semibold text-text-secondary">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {filteredProjects.map(project => (
+                                        <tr key={project.id} className="hover:bg-slate-50/50">
+                                            <td className="p-4 font-medium text-text-primary">
+                                                <Link to={`/projetos/${project.id}`} className="hover:underline">{project.name}</Link>
+                                            </td>
+                                            <td className="p-4 text-text-secondary">{project.project_code || 'N/A'}</td>
+                                            <td className="p-4 text-text-secondary">{project.client || 'N/A'}</td>
+                                            <td className="p-4 text-text-secondary">{project.status || 'N/A'}</td>
+                                            <td className="p-4 text-right text-text-secondary">{project.total_volume ? project.total_volume.toFixed(2) : 'N/A'}</td>
+                                            <td className="p-4 text-right">
+                                                <Button variant="destructive" size="icon" onClick={() => handleDeleteRequest(project)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </CardContent>
+                </Card>
             )}
 
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
