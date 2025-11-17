@@ -30,9 +30,9 @@ interface Piece {
     quantity: number;
     section: string;
     length: number;
-    weight: number;
+    weight: number | null;
     unit_volume: number;
-    concrete_class: string;
+    concrete_class: string | null;
     piece_ids: string[] | null;
 }
 
