@@ -10,11 +10,13 @@ import { SessionContextProvider } from './components/SessionContextProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import ProjectDetails from './pages/ProjectDetails';
+import { Toaster } from 'react-hot-toast';
 
 const App = () => {
     return (
         <BrowserRouter>
             <SessionContextProvider>
+                <Toaster position="top-center" />
                 <Routes>
                     <Route path="/login" element={<Login />} />
                     

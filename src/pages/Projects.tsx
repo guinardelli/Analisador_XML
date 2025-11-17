@@ -1,94 +1,112 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../integrations/supabase/client';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { Folder } from 'lucide-react';
+import { Trash2, PlusCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 interface Project {
     id: string;
     name: string;
+    description: string;
     project_code: string;
-    client: string;
     created_at: string;
 }
 
 const Projects = () => {
     const [projects, setProjects] = useState<Project[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchProjects = async () => {
-            setIsLoading(true);
-            const { data, error } = await supabase
-                .from('projects')
-                .select('*')
-                .order('created_at', { ascending: false });
+            setLoading(true);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data, error } = await supabase
+                    .from('projects')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .order('created_at', { ascending: false });
 
-            if (error) {
-                setError(`Erro ao buscar projetos: ${error.message}`);
-            } else {
-                setProjects(data || []);
+                if (error) {
+                    console.error('Error fetching projects:', error);
+                    toast.error('Falha ao carregar os projetos.');
+                } else {
+                    setProjects(data || []);
+                }
             }
-            setIsLoading(false);
+            setLoading(false);
         };
 
         fetchProjects();
     }, []);
 
+    const handleDelete = async (projectId: string) => {
+        if (window.confirm('Tem certeza que deseja excluir este projeto? Todos os dados relacionados serão perdidos.')) {
+            const { error } = await supabase
+                .from('projects')
+                .delete()
+                .eq('id', projectId);
+
+            if (error) {
+                toast.error('Erro ao excluir o projeto.');
+                console.error('Error deleting project:', error);
+            } else {
+                toast.success('Projeto excluído com sucesso!');
+                setProjects(projects.filter(p => p.id !== projectId));
+            }
+        }
+    };
+
+    if (loading) {
+        return <div className="p-4">Carregando projetos...</div>;
+    }
+
     return (
-        <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-            <header className="mb-10">
-                <h1 className="text-3xl sm:text-4xl font-bold text-text-primary">Projetos</h1>
-                <p className="mt-3 text-base sm:text-lg text-text-secondary">Gerencie e visualize seus projetos cadastrados.</p>
-            </header>
+        <div className="p-4 md:p-8">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold">Meus Projetos</h1>
+                <Link to="/cadastro-projetos">
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Novo Projeto
+                    </Button>
+                </Link>
+            </div>
 
-            {isLoading && (
-                <div className="text-center text-text-secondary">
-                    <p>Carregando projetos...</p>
+            {projects.length === 0 ? (
+                <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                    <p className="text-gray-500">Nenhum projeto encontrado.</p>
+                    <p className="mt-2">
+                        <Link to="/cadastro-projetos" className="text-blue-600 hover:underline">
+                            Crie seu primeiro projeto
+                        </Link>
+                    </p>
                 </div>
-            )}
-
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl" role="alert">
-                    <p>{error}</p>
+            ) : (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {projects.map(project => (
+                        <Card key={project.id} className="flex flex-col">
+                            <CardHeader>
+                                <CardTitle className="hover:text-blue-600">
+                                    <Link to={`/projetos/${project.id}`}>{project.name}</Link>
+                                </CardTitle>
+                                <CardDescription>Código: {project.project_code || 'N/A'}</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <p className="text-sm text-gray-600">{project.description}</p>
+                            </CardContent>
+                            <CardFooter className="flex justify-between items-center">
+                                <span className="text-xs text-gray-500">
+                                    Criado em: {new Date(project.created_at).toLocaleDateString()}
+                                </span>
+                                <Button variant="destructive" size="icon" onClick={() => handleDelete(project.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    ))}
                 </div>
-            )}
-
-            {!isLoading && !error && (
-                projects.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {projects.map((project) => (
-                            <Link to={`/projetos/${project.id}`} key={project.id} className="block group">
-                                <Card className="h-full transition-all duration-200 group-hover:shadow-lg group-hover:border-primary group-hover:-translate-y-1">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-start gap-3">
-                                            <Folder className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
-                                            <span className="truncate">{project.name}</span>
-                                        </CardTitle>
-                                        <CardDescription>{project.project_code}</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div>
-                                            <p className="text-sm font-medium text-text-secondary">Cliente</p>
-                                            <p className="text-base text-text-primary">{project.client}</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center bg-surface rounded-xl shadow-md border border-border-default p-10">
-                        <h3 className="text-xl font-semibold text-text-primary">Nenhum projeto encontrado</h3>
-                        <p className="mt-2 text-text-secondary">
-                            Comece cadastrando um novo projeto na página{' '}
-                            <Link to="/cadastro-projetos" className="text-primary hover:underline font-medium">
-                                Cadastro de Projetos
-                            </Link>.
-                        </p>
-                    </div>
-                )
             )}
         </div>
     );
