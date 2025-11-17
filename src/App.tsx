@@ -8,6 +8,7 @@ import Reports from './pages/Reports';
 import Login from './pages/Login';
 import { SessionContextProvider } from './components/SessionContextProvider';
 import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
 
 const App = () => {
     return (
@@ -19,7 +20,8 @@ const App = () => {
                     {/* Rotas Protegidas */}
                     <Route element={<ProtectedRoute />}>
                         <Route path="/" element={<Layout />}>
-                            <Route index element={<Analyzer />} />
+                            <Route index element={<Home />} />
+                            <Route path="analisador" element={<Analyzer />} />
                             <Route path="cadastro-projetos" element={<ProjectRegistry />} />
                             <Route path="projetos" element={<Projects />} />
                             <Route path="relatorios" element={<Reports />} />

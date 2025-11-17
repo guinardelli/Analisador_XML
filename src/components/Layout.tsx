@@ -1,8 +1,11 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { BarChart, FolderPlus, LayoutGrid, FileText } from 'lucide-react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Home, BarChart, FolderPlus, LayoutGrid, FileText, LogOut } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from './ui/button';
 
 const Sidebar = () => {
+    const navigate = useNavigate();
     const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
         `flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition-colors ${
             isActive
@@ -10,13 +13,22 @@ const Sidebar = () => {
                 : 'text-text-secondary hover:bg-slate-200'
         }`;
 
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate('/login', { replace: true });
+    };
+
     return (
         <aside className="w-64 bg-surface border-r border-border-default flex flex-col">
             <div className="p-4 border-b border-border-default">
                 <h1 className="text-xl font-bold text-text-primary">Tekla x Plannix</h1>
             </div>
             <nav className="flex-grow p-4 space-y-2">
-                <NavLink to="/" className={navLinkClasses}>
+                <NavLink to="/" end className={navLinkClasses}>
+                    <Home className="w-5 h-5 mr-3" />
+                    Início
+                </NavLink>
+                <NavLink to="/analisador" className={navLinkClasses}>
                     <BarChart className="w-5 h-5 mr-3" />
                     Analisador
                 </NavLink>
@@ -33,6 +45,12 @@ const Sidebar = () => {
                     Relatórios
                 </NavLink>
             </nav>
+            <div className="p-4 border-t border-border-default">
+                <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-text-secondary hover:bg-slate-200 hover:text-text-primary">
+                    <LogOut className="w-5 h-5 mr-3" />
+                    Sair
+                </Button>
+            </div>
         </aside>
     );
 };

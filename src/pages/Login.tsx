@@ -6,22 +6,20 @@ import { useSession } from '@/components/SessionContextProvider';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
-  const { session, isLoading } = useSession();
+  const { session } = useSession();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && session) {
-      // Redireciona para a página principal após o login
+    if (session) {
+      // Redireciona para a página principal se já houver uma sessão
       navigate('/', { replace: true });
     }
-  }, [session, isLoading, navigate]);
+  }, [session, navigate]);
 
-  if (isLoading || session) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <p className="text-text-secondary">Carregando...</p>
-      </div>
-    );
+  // Se uma sessão for detectada, o useEffect acima irá redirecionar.
+  // Renderiza o formulário de login apenas para usuários não autenticados.
+  if (session) {
+    return null; // Evita renderizar o formulário brevemente antes do redirecionamento
   }
 
   return (
