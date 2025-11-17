@@ -76,6 +76,7 @@ const ProjectDetails = () => {
             toast.error(`Erro ao buscar as peças: ${piecesError.message}`);
         } else {
             setPieces(piecesData || []);
+            console.log('Fetched pieces for project:', projectId, piecesData); // Log para depuração
         }
 
         setIsLoading(false);

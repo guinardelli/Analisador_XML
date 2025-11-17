@@ -216,6 +216,7 @@ const PieceRegistry = () => {
         setIsSavingToDb(true);
         
         const piecesToInsert = parsedPieces.filter(p => selectedPieces.has(p.name));
+        console.log('Pieces to insert via RPC:', piecesToInsert); // Log para depuração
 
         const { error: rpcError } = await supabase.rpc('replace_project_pieces', {
             p_project_id: selectedProjectId,
