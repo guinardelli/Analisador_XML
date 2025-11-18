@@ -5,7 +5,31 @@ import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input'; // Importar Input
+import { Input } from '@/components/ui/input';
+
+// Importações para os gráficos
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
+import { Bar, Pie } from 'react-chartjs-2';
+
+// Registrar componentes do Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 interface Project {
     id: string;
@@ -22,7 +46,7 @@ interface ReportPiece {
     unit_volume: number;
     is_released: boolean;
     released_at: string | null;
-    concrete_class: string; // Adicionado para filtro
+    concrete_class: string;
 }
 
 interface Filters {
@@ -34,12 +58,19 @@ interface Filters {
 
 const initialFilters: Filters = { name: '', group: [], section: [], concrete_class: [] };
 
+// Cores para os gráficos
+const chartColors = [
+  '#fcc200', '#EC4899', '#10B981', '#F59E0B', 
+  '#3B82F6', '#8B5CF6', '#D946EF', '#06B6D4',
+  '#8B5CF6', '#EF4444'
+];
+
 const Reports = () => {
     const { user } = useSession();
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-    const [rawReportData, setRawReportData] = useState<ReportPiece[]>([]); // Dados brutos antes dos filtros
-    const [reportData, setReportData] = useState<ReportPiece[]>([]); // Dados filtrados para exibição
+    const [rawReportData, setRawReportData] = useState<ReportPiece[]>([]);
+    const [reportData, setReportData] = useState<ReportPiece[]>([]);
     const [isLoadingProjects, setIsLoadingProjects] = useState(true);
     const [isLoadingReport, setIsLoadingReport] = useState(false);
     const [currentProjectName, setCurrentProjectName] = useState('');
@@ -78,9 +109,9 @@ const Reports = () => {
             return;
         }
         setIsLoadingReport(true);
-        setRawReportData([]); // Limpa dados brutos
-        setReportData([]); // Limpa dados exibidos
-        setFilters(initialFilters); // Reseta filtros ao gerar novo relatório
+        setRawReportData([]);
+        setReportData([]);
+        setFilters(initialFilters);
 
         const selectedProject = projects.find(p => p.id === selectedProjectId);
         setCurrentProjectName(selectedProject ? `${selectedProject.name} (${selectedProject.project_code})` : '');
@@ -88,7 +119,7 @@ const Reports = () => {
         // 1. Fetch all grouped pieces for the project
         const { data: groupedPieces, error: piecesError } = await supabase
             .from('pieces')
-            .select('name, group, section, weight, unit_volume, piece_ids, concrete_class') // Incluir concrete_class
+            .select('name, group, section, weight, unit_volume, piece_ids, concrete_class')
             .eq('project_id', selectedProjectId);
 
         if (piecesError) {
@@ -135,7 +166,7 @@ const Reports = () => {
         // Sort by piece ID
         allPieces.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
 
-        setRawReportData(allPieces); // Armazena todos os dados brutos
+        setRawReportData(allPieces);
         
         // Popula as opções de filtro disponíveis
         const uniqueGroups = [...new Set(allPieces.map(p => p.group))].sort();
@@ -199,6 +230,71 @@ const Reports = () => {
         return { totalPieces, releasedCount };
     }, [reportData]);
 
+    // Dados para o gráfico de distribuição por tipo de peça
+    const piecesByGroupData = useMemo(() => {
+        if (reportData.length === 0) return null;
+        
+        const groupCounts = reportData.reduce((acc, piece) => {
+            acc[piece.group] = (acc[piece.group] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const sortedEntries = Object.entries(groupCounts).sort(([,a],[,b]) => b - a);
+        const topEntries = sortedEntries.slice(0, 10); // Limitar a top 10 para melhor visualização
+        
+        return {
+            labels: topEntries.map(([group]) => group),
+            datasets: [{
+                label: 'Quantidade de Peças',
+                data: topEntries.map(([,count]) => count),
+                backgroundColor: chartColors.slice(0, topEntries.length),
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
+        };
+    }, [reportData]);
+
+    // Dados para o gráfico das top 10 peças mais pesadas
+    const heaviestPiecesData = useMemo(() => {
+        if (reportData.length === 0) return null;
+        
+        // Obter peças únicas por nome (considerando que peças com mesmo nome têm mesmo peso)
+        const uniquePieces = Array.from(
+            new Map(reportData.map(p => [p.name, p])).values()
+        );
+        
+        const sortedByWeight = uniquePieces
+            .sort((a, b) => b.weight - a.weight)
+            .slice(0, 10);
+        
+        return {
+            labels: sortedByWeight.map(p => p.name),
+            datasets: [{
+                label: 'Peso (kg)',
+                data: sortedByWeight.map(p => p.weight),
+                backgroundColor: '#fcc200',
+                borderColor: '#e3af00',
+                borderWidth: 1
+            }]
+        };
+    }, [reportData]);
+
+    // Opções comuns para os gráficos
+    const chartOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                font: {
+                    size: 16
+                }
+            }
+        }
+    };
+
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
             <div className="max-w-6xl mx-auto">
@@ -236,7 +332,7 @@ const Reports = () => {
                     </CardContent>
                 </Card>
 
-                {rawReportData.length > 0 && ( // Mostrar filtros apenas se houver dados brutos carregados
+                {rawReportData.length > 0 && (
                     <Card className="mb-8 animate-fade-in">
                         <CardHeader>
                             <CardTitle>Filtros de Peças</CardTitle>
@@ -283,58 +379,108 @@ const Reports = () => {
                 )}
 
                 {reportData.length > 0 && (
-                    <Card className="animate-fade-in">
-                        <CardHeader>
-                            <CardTitle>Relatório do Projeto: {currentProjectName}</CardTitle>
-                            <CardDescription>
-                                Total de {summary.totalPieces} peças. 
-                                Liberadas: {summary.releasedCount}. 
-                                Pendentes: {summary.totalPieces - summary.releasedCount}.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto border rounded-lg">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-slate-50">
-                                        <tr>
-                                            <th className="p-3 text-left font-semibold text-text-secondary">ID Peça</th>
-                                            <th className="p-3 text-left font-semibold text-text-secondary">Nome</th>
-                                            <th className="p-3 text-left font-semibold text-text-secondary">Tipo</th>
-                                            <th className="p-3 text-left font-semibold text-text-secondary">Seção</th>
-                                            <th className="p-3 text-left font-semibold text-text-secondary">Concreto</th>
-                                            <th className="p-3 text-center font-semibold text-text-secondary">Status</th>
-                                            <th className="p-3 text-left font-semibold text-text-secondary">Data Liberação</th>
-                                            <th className="p-3 text-right font-semibold text-text-secondary">Peso (kg)</th>
-                                            <th className="p-3 text-right font-semibold text-text-secondary">Volume (m³)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {reportData.map(piece => (
-                                            <tr key={piece.id} className="hover:bg-slate-50/50">
-                                                <td className="p-3 font-medium text-text-primary">{piece.id}</td>
-                                                <td className="p-3 text-text-secondary">{piece.name}</td>
-                                                <td className="p-3 text-text-secondary">{piece.group}</td>
-                                                <td className="p-3 text-text-secondary">{piece.section}</td>
-                                                <td className="p-3 text-text-secondary">{piece.concrete_class}</td>
-                                                <td className="p-3 text-center">
-                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                                        piece.is_released 
-                                                        ? 'bg-green-100 text-green-800' 
-                                                        : 'bg-yellow-100 text-yellow-800'
-                                                    }`}>
-                                                        {piece.is_released ? 'Liberada' : 'Pendente'}
-                                                    </span>
-                                                </td>
-                                                <td className="p-3 text-text-secondary">{formatBRLDate(piece.released_at)}</td>
-                                                <td className="p-3 text-right text-text-secondary">{piece.weight.toFixed(2)}</td>
-                                                <td className="p-3 text-right text-text-secondary">{piece.unit_volume.toFixed(4)}</td>
+                    <>
+                        {/* Gráficos */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Distribuição por Tipo de Peça</CardTitle>
+                                    <CardDescription>Quantidade de peças por tipo (Top 10)</CardDescription>
+                                </CardHeader>
+                                <CardContent className="h-80">
+                                    {piecesByGroupData ? (
+                                        <Pie data={piecesByGroupData} options={chartOptions} />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-text-secondary">
+                                            Nenhum dado disponível
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                            
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Top 10 Peças Mais Pesadas</CardTitle>
+                                    <CardDescription>Peso das peças mais pesadas do projeto</CardDescription>
+                                </CardHeader>
+                                <CardContent className="h-80">
+                                    {heaviestPiecesData ? (
+                                        <Bar 
+                                            data={heaviestPiecesData} 
+                                            options={{
+                                                ...chartOptions,
+                                                indexAxis: 'y' as const,
+                                                plugins: {
+                                                    ...chartOptions.plugins,
+                                                    legend: {
+                                                        display: false
+                                                    }
+                                                }
+                                            }} 
+                                        />
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full text-text-secondary">
+                                            Nenhum dado disponível
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Tabela de dados */}
+                        <Card className="animate-fade-in">
+                            <CardHeader>
+                                <CardTitle>Relatório do Projeto: {currentProjectName}</CardTitle>
+                                <CardDescription>
+                                    Total de {summary.totalPieces} peças. 
+                                    Liberadas: {summary.releasedCount}. 
+                                    Pendentes: {summary.totalPieces - summary.releasedCount}.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto border rounded-lg">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-slate-50">
+                                            <tr>
+                                                <th className="p-3 text-left font-semibold text-text-secondary">ID Peça</th>
+                                                <th className="p-3 text-left font-semibold text-text-secondary">Nome</th>
+                                                <th className="p-3 text-left font-semibold text-text-secondary">Tipo</th>
+                                                <th className="p-3 text-left font-semibold text-text-secondary">Seção</th>
+                                                <th className="p-3 text-left font-semibold text-text-secondary">Concreto</th>
+                                                <th className="p-3 text-center font-semibold text-text-secondary">Status</th>
+                                                <th className="p-3 text-left font-semibold text-text-secondary">Data Liberação</th>
+                                                <th className="p-3 text-right font-semibold text-text-secondary">Peso (kg)</th>
+                                                <th className="p-3 text-right font-semibold text-text-secondary">Volume (m³)</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {reportData.map(piece => (
+                                                <tr key={piece.id} className="hover:bg-slate-50/50">
+                                                    <td className="p-3 font-medium text-text-primary">{piece.id}</td>
+                                                    <td className="p-3 text-text-secondary">{piece.name}</td>
+                                                    <td className="p-3 text-text-secondary">{piece.group}</td>
+                                                    <td className="p-3 text-text-secondary">{piece.section}</td>
+                                                    <td className="p-3 text-text-secondary">{piece.concrete_class}</td>
+                                                    <td className="p-3 text-center">
+                                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                                            piece.is_released 
+                                                            ? 'bg-green-100 text-green-800' 
+                                                            : 'bg-yellow-100 text-yellow-800'
+                                                        }`}>
+                                                            {piece.is_released ? 'Liberada' : 'Pendente'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3 text-text-secondary">{formatBRLDate(piece.released_at)}</td>
+                                                    <td className="p-3 text-right text-text-secondary">{piece.weight.toFixed(2)}</td>
+                                                    <td className="p-3 text-right text-text-secondary">{piece.unit_volume.toFixed(4)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </>
                 )}
             </div>
         </div>
