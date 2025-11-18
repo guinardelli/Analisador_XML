@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Package, Scale, Ruler, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PiecesViewer from '@/components/PiecesViewer';
 import ProjectSummaryCard from '@/components/ProjectSummaryCard';
@@ -21,6 +21,15 @@ interface Project {
     end_date: string | null;
 }
 
+interface ProjectMetrics {
+    totalPieces: number;
+    totalWeight: number;
+    totalVolume: number;
+    uniqueGroups: number;
+    uniqueSections: number;
+    releasedPieces: number;
+}
+
 const ProjectDetails = () => {
     const { projectId } = useParams<{ projectId: string }>();
     const [project, setProject] = useState<Project | null>(null);
@@ -29,7 +38,9 @@ const ProjectDetails = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isSummaryOpen, setIsSummaryOpen] = useState(false); // Alterado para false por padrão
+    const [isSummaryOpen, setIsSummaryOpen] = useState(true);
+    const [metrics, setMetrics] = useState<ProjectMetrics | null>(null);
+    const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
 
     const fetchProjectData = useCallback(async () => {
         if (!projectId) return;
@@ -54,9 +65,71 @@ const ProjectDetails = () => {
         setIsLoading(false);
     }, [projectId]);
 
+    const fetchProjectMetrics = useCallback(async () => {
+        if (!projectId) return;
+
+        setIsLoadingMetrics(true);
+
+        // Buscar todas as peças do projeto
+        const { data: pieces, error: piecesError } = await supabase
+            .from('pieces')
+            .select('quantity, weight, unit_volume, group, section, piece_ids')
+            .eq('project_id', projectId);
+
+        if (piecesError) {
+            console.error('Erro ao buscar métricas:', piecesError);
+            setIsLoadingMetrics(false);
+            return;
+        }
+
+        // Buscar peças liberadas
+        const { data: releasedPieces, error: releasedError } = await supabase
+            .from('piece_status')
+            .select('piece_mark')
+            .eq('project_id', projectId)
+            .eq('is_released', true);
+
+        if (releasedError) {
+            console.error('Erro ao buscar peças liberadas:', releasedError);
+            setIsLoadingMetrics(false);
+            return;
+        }
+
+        // Calcular métricas
+        let totalPieces = 0;
+        let totalWeight = 0;
+        let totalVolume = 0;
+        const groups = new Set<string>();
+        const sections = new Set<string>();
+        
+        pieces.forEach(piece => {
+            // Contar peças individuais
+            const pieceCount = piece.piece_ids ? piece.piece_ids.length : piece.quantity;
+            totalPieces += pieceCount;
+            totalWeight += piece.weight * pieceCount;
+            totalVolume += piece.unit_volume * pieceCount;
+            groups.add(piece.group);
+            sections.add(piece.section);
+        });
+
+        const releasedCount = releasedPieces ? releasedPieces.length : 0;
+
+        setMetrics({
+            totalPieces,
+            totalWeight,
+            totalVolume,
+            uniqueGroups: groups.size,
+            uniqueSections: sections.size,
+            releasedPieces: releasedCount
+        });
+
+        setIsLoadingMetrics(false);
+    }, [projectId]);
+
     useEffect(() => {
         fetchProjectData();
-    }, [fetchProjectData]);
+        fetchProjectMetrics();
+    }, [fetchProjectData, fetchProjectMetrics]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -83,18 +156,25 @@ const ProjectDetails = () => {
         } else {
             toast.success('Projeto atualizado com sucesso!');
             setIsEditing(false);
-            fetchProjectData(); // Re-fetch project data to get updated total_volume if any
+            fetchProjectData();
         }
     };
 
     const handleEdit = () => {
         setIsEditing(true);
-        setIsSummaryOpen(true); // Abrir o resumo quando entrar em modo de edição
+        setIsSummaryOpen(true);
     };
 
     const handleCancelEdit = () => {
         setEditableProject(project || {});
         setIsEditing(false);
+    };
+
+    const formatNumber = (num: number, decimals: number = 2) => {
+        return num.toLocaleString('pt-BR', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
     };
 
     if (isLoading) return <div className="p-8 text-center">Carregando detalhes do projeto...</div>;
@@ -112,6 +192,65 @@ const ProjectDetails = () => {
                 <div className="mb-6">
                     <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">{project.name}</h1>
                     <p className="text-text-secondary">{project.project_code}</p>
+                </div>
+
+                {/* Resumo do Projeto */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                                <Package className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-text-secondary dark:text-text-subtle">Total de Peças</p>
+                                <p className="text-xl font-bold text-text-primary dark:text-white">
+                                    {isLoadingMetrics ? '...' : metrics?.totalPieces || 0}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                                <Scale className="h-5 w-5 text-green-600 dark:text-green-300" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-text-secondary dark:text-text-subtle">Peso Total</p>
+                                <p className="text-xl font-bold text-text-primary dark:text-white">
+                                    {isLoadingMetrics ? '...' : `${formatNumber(metrics?.totalWeight || 0)} kg`}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                                <Ruler className="h-5 w-5 text-purple-600 dark:text-purple-300" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-text-secondary dark:text-text-subtle">Volume Total</p>
+                                <p className="text-xl font-bold text-text-primary dark:text-white">
+                                    {isLoadingMetrics ? '...' : `${formatNumber(metrics?.totalVolume || 0, 3)} m³`}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
+                                <Calendar className="h-5 w-5 text-amber-600 dark:text-amber-300" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-text-secondary dark:text-text-subtle">Peças Liberadas</p>
+                                <p className="text-xl font-bold text-text-primary dark:text-white">
+                                    {isLoadingMetrics ? '...' : `${metrics?.releasedPieces || 0} / ${metrics?.totalPieces || 0}`}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <ProjectSummaryCard 
