@@ -38,7 +38,7 @@ const ProjectDetails = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isSummaryOpen, setIsSummaryOpen] = useState(true);
+    const [isSummaryOpen, setIsSummaryOpen] = useState(false); // Alterado para false por padrão
     const [metrics, setMetrics] = useState<ProjectMetrics | null>(null);
     const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
 
