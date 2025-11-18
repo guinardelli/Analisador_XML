@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 const getElementContent = (element: Element, tagName: string): string | null => {
     const content = element.querySelector(tagName)?.textContent?.trim();
