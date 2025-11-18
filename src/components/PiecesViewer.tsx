@@ -149,8 +149,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     const [filters, setFilters] = useState<Filters>(initialFilters);
     const [stagedFilters, setStagedFilters] = useState<Filters>(initialFilters);
     
-    // Removido sortConfig e handleSort, pois não são mais necessários no novo layout
-    
     const [availableOptions, setAvailableOptions] = useState({
         groups: [] as string[],
         sections: [] as string[],
@@ -310,6 +308,13 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
         });
     };
 
+    // Agrupar as peças filtradas pelo nome da peça agrupada (GroupedPiece.name)
+    // Este useMemo foi movido para antes dos retornos condicionais.
+    const filteredGroupedPieces = useMemo(() => {
+        const filteredGroupIds = new Set(displayedPieces.map(p => p.name));
+        return groupedPieces.filter(group => filteredGroupIds.has(group.name));
+    }, [groupedPieces, displayedPieces]);
+
     if (isLoadingPieces || isStatusLoading) {
         return (
             <div className="bg-surface rounded-xl shadow-md border border-border-default p-6 text-center mt-8">
@@ -325,12 +330,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
             </div>
         );
     }
-
-    // Agrupar as peças filtradas pelo nome da peça agrupada (GroupedPiece.name)
-    const filteredGroupedPieces = useMemo(() => {
-        const filteredGroupIds = new Set(displayedPieces.map(p => p.name));
-        return groupedPieces.filter(group => filteredGroupIds.has(group.name));
-    }, [groupedPieces, displayedPieces]);
 
     return (
         <div className="space-y-8 mt-8">
