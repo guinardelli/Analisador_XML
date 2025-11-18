@@ -147,7 +147,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     
     const initialFilters: Filters = { name: '', group: [], section: [], concrete_class: [] };
     const [filters, setFilters] = useState<Filters>(initialFilters);
-    const [stagedFilters, setStagedFilters] = useState<Filters>(initialFilters);
     
     const [availableOptions, setAvailableOptions] = useState({
         groups: [] as string[],
@@ -193,7 +192,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     useEffect(() => {
         if (allIndividualPieces.length === 0) return;
 
-        const { group, section, concrete_class } = stagedFilters;
+        const { group, section, concrete_class } = filters; // Usar filters diretamente
 
         const piecesForGroup = allIndividualPieces.filter(p =>
             (section.length === 0 || section.includes(p.section)) &&
@@ -219,7 +218,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
             concreteClasses: newConcreteClasses,
         });
 
-    }, [stagedFilters, allIndividualPieces]);
+    }, [filters, allIndividualPieces]); // Depender de filters
 
     const handleStatusChange = async (pieceId: string, newStatus: boolean) => {
         setPieceStatuses(prev => new Map(prev).set(pieceId, newStatus));
@@ -247,19 +246,17 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
         }
     };
 
-    const handleStagedFilterChange = (field: 'name', value: string) => setStagedFilters(prev => ({...prev, [field]: value}));
-    const handleStagedCheckboxChange = (field: 'group' | 'section' | 'concrete_class', value: string) => {
-        setStagedFilters(prev => {
+    const handleFilterChange = (field: 'name', value: string) => setFilters(prev => ({...prev, [field]: value}));
+    const handleCheckboxChange = (field: 'group' | 'section' | 'concrete_class', value: string) => {
+        setFilters(prev => {
             const currentValues = prev[field];
             const newValues = currentValues.includes(value) ? currentValues.filter(v => v !== value) : [...currentValues, value];
             return {...prev, [field]: newValues};
         });
     };
     
-    const handleApplyFilters = () => setFilters(stagedFilters);
     const handleClearFilters = () => {
         setFilters(initialFilters);
-        setStagedFilters(initialFilters);
     };
 
     const formatNumber = (num: number, options?: Intl.NumberFormatOptions) => num.toLocaleString('pt-BR', options);
@@ -309,7 +306,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     };
 
     // Agrupar as peças filtradas pelo nome da peça agrupada (GroupedPiece.name)
-    // Este useMemo foi movido para antes dos retornos condicionais.
     const filteredGroupedPieces = useMemo(() => {
         const filteredGroupIds = new Set(displayedPieces.map(p => p.name));
         return groupedPieces.filter(group => filteredGroupIds.has(group.name));
@@ -336,15 +332,14 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
             <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
                 <h2 className="text-xl font-bold text-text-primary mb-6">Filtros de Peças</h2>
                 <div className="space-y-6">
-                    <input type="text" value={stagedFilters.name} onChange={e => handleStagedFilterChange('name', e.target.value)} placeholder="Buscar por nome..." className="w-full bg-surface border border-border-default rounded-md p-2 text-sm focus:ring-primary focus:border-primary"/>
+                    <input type="text" value={filters.name} onChange={e => handleFilterChange('name', e.target.value)} placeholder="Buscar por nome..." className="w-full bg-surface border border-border-default rounded-md p-2 text-sm focus:ring-primary focus:border-primary"/>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {[{ id: 'group', label: 'Tipo', options: availableOptions.groups, selected: stagedFilters.group }, { id: 'section', label: 'Seção', options: availableOptions.sections, selected: stagedFilters.section }, { id: 'concrete_class', label: 'Concreto', options: availableOptions.concreteClasses, selected: stagedFilters.concrete_class }].map(group => (
-                            <div key={group.id}><label className="block text-sm font-medium text-text-secondary mb-1">{group.label} {group.selected.length > 0 && `(${group.selected.length})`}</label><div className="h-40 overflow-y-auto p-3 border border-border-default rounded-lg bg-background space-y-2">{group.options.map(opt => (<label key={opt} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary"><input type="checkbox" checked={group.selected.includes(opt)} onChange={() => handleStagedCheckboxChange(group.id as 'group' | 'section' | 'concrete_class', opt)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"/><span>{opt}</span></label>))}</div></div>
+                        {[{ id: 'group', label: 'Tipo', options: availableOptions.groups, selected: filters.group }, { id: 'section', label: 'Seção', options: availableOptions.sections, selected: filters.section }, { id: 'concrete_class', label: 'Concreto', options: availableOptions.concreteClasses, selected: filters.concrete_class }].map(group => (
+                            <div key={group.id}><label className="block text-sm font-medium text-text-secondary mb-1">{group.label} {group.selected.length > 0 && `(${group.selected.length})`}</label><div className="h-40 overflow-y-auto p-3 border border-border-default rounded-lg bg-background space-y-2">{group.options.map(opt => (<label key={opt} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary"><input type="checkbox" checked={group.selected.includes(opt)} onChange={() => handleCheckboxChange(group.id as 'group' | 'section' | 'concrete_class', opt)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"/><span>{opt}</span></label>))}</div></div>
                         ))}
                     </div>
                     <div className="flex justify-end pt-4 mt-2 border-t border-border-default gap-3">
                         <button onClick={handleClearFilters} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-md transition-colors text-sm">Limpar</button>
-                        <button onClick={handleApplyFilters} className="bg-primary hover:bg-primary-hover text-primary-text font-bold py-2 px-4 rounded-md shadow-sm transition-colors text-sm">Aplicar Filtros</button>
                     </div>
                 </div>
             </div>
