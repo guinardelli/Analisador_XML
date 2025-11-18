@@ -13,7 +13,11 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import toast from 'react-hot-toast';
 import { useSession } from '@/components/SessionContextProvider';
-import { ChevronDown } from 'lucide-react'; // Importar o ícone ChevronDown
+import { ChevronDown, ChevronUp } from 'lucide-react'; // Importar os ícones ChevronDown e ChevronUp
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Importar componentes Card
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 // --- CHART.JS REGISTRATION ---
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -73,6 +77,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     const [isLoadingPieces, setIsLoadingPieces] = useState(true);
     const [isStatusLoading, setIsStatusLoading] = useState(true);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set()); // Estado para grupos expandidos
+    const [isFilterOpen, setIsFilterOpen] = useState(false); // Estado para o filtro expansível
 
     const fetchPiecesAndStatuses = useCallback(async () => {
         if (!projectId) {
@@ -329,20 +334,31 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
 
     return (
         <div className="space-y-8 mt-8">
-            <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
-                <h2 className="text-xl font-bold text-text-primary mb-6">Filtros de Peças</h2>
-                <div className="space-y-6">
-                    <input type="text" value={filters.name} onChange={e => handleFilterChange('name', e.target.value)} placeholder="Buscar por nome..." className="w-full bg-surface border border-border-default rounded-md p-2 text-sm focus:ring-primary focus:border-primary"/>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {[{ id: 'group', label: 'Tipo', options: availableOptions.groups, selected: filters.group }, { id: 'section', label: 'Seção', options: availableOptions.sections, selected: filters.section }, { id: 'concrete_class', label: 'Concreto', options: availableOptions.concreteClasses, selected: filters.concrete_class }].map(group => (
-                            <div key={group.id}><label className="block text-sm font-medium text-text-secondary mb-1">{group.label} {group.selected.length > 0 && `(${group.selected.length})`}</label><div className="h-40 overflow-y-auto p-3 border border-border-default rounded-lg bg-background space-y-2">{group.options.map(opt => (<label key={opt} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary"><input type="checkbox" checked={group.selected.includes(opt)} onChange={() => handleCheckboxChange(group.id as 'group' | 'section' | 'concrete_class', opt)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"/><span>{opt}</span></label>))}</div></div>
-                        ))}
+            <Card className="mb-6">
+                <CardHeader className="py-3 px-4">
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="text-lg">Filtros de Peças</CardTitle>
+                        <Button variant="ghost" size="sm" onClick={() => setIsFilterOpen(!isFilterOpen)} className="h-8 w-8 p-0">
+                            {isFilterOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
                     </div>
-                    <div className="flex justify-end pt-4 mt-2 border-t border-border-default gap-3">
-                        <button onClick={handleClearFilters} className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-4 rounded-md transition-colors text-sm">Limpar</button>
-                    </div>
-                </div>
-            </div>
+                </CardHeader>
+                {isFilterOpen && (
+                    <CardContent className="px-4 py-3">
+                        <div className="space-y-6">
+                            <Input type="text" value={filters.name} onChange={e => handleFilterChange('name', e.target.value)} placeholder="Buscar por nome..." className="w-full bg-surface border border-border-default rounded-md p-2 text-sm focus:ring-primary focus:border-primary"/>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {[{ id: 'group', label: 'Tipo', options: availableOptions.groups, selected: filters.group }, { id: 'section', label: 'Seção', options: availableOptions.sections, selected: filters.section }, { id: 'concrete_class', label: 'Concreto', options: availableOptions.concreteClasses, selected: filters.concrete_class }].map(group => (
+                                    <div key={group.id}><Label className="block text-sm font-medium text-text-secondary mb-1">{group.label} {group.selected.length > 0 && `(${group.selected.length})`}</Label><div className="h-40 overflow-y-auto p-3 border border-border-default rounded-lg bg-background space-y-2">{group.options.map(opt => (<label key={opt} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary"><input type="checkbox" checked={group.selected.includes(opt)} onChange={() => handleCheckboxChange(group.id as 'group' | 'section' | 'concrete_class', opt)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"/><span>{opt}</span></label>))}</div></div>
+                                ))}
+                            </div>
+                            <div className="flex justify-end pt-4 mt-2 border-t border-border-default gap-3">
+                                <Button onClick={handleClearFilters} variant="outline" className="text-sm">Limpar</Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                )}
+            </Card>
 
             {summary && (
                 <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
