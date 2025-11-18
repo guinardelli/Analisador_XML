@@ -75,12 +75,19 @@ const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: PieceFr
     if (pieceElements.length === 0) throw new Error('Nenhuma peça <PECA> encontrada no arquivo.');
 
     const pieces: PieceFromXml[] = pieceElements.map(p => {
-        // CORREÇÃO AQUI: Alterado de 'LISTA_IDS ID' para 'LISTAID ID'
+        const pieceName = getElementTextContent(p, 'NOMEPECA');
         const idElements = Array.from(p.querySelectorAll('LISTAID ID'));
+        
+        // NOVO LOG: Para inspecionar o que querySelectorAll está retornando
+        console.log(`PieceRegistry (parseSingleXml): Para a peça "${pieceName}", idElements encontrados:`, idElements);
+
         const piece_ids = idElements.map(id => id.textContent || '').filter(Boolean);
+        
+        // NOVO LOG: Para inspecionar os IDs após o map e filter
+        console.log(`PieceRegistry (parseSingleXml): Para a peça "${pieceName}", piece_ids extraídos:`, piece_ids);
 
         return {
-            name: getElementTextContent(p, 'NOMEPECA'),
+            name: pieceName,
             type: getElementTextContent(p, 'TIPOPRODUTO'),
             quantity: parseInt(getElementTextContent(p, 'QUANTIDADE'), 10) || 0,
             section: getElementTextContent(p, 'SECAO'),
@@ -163,8 +170,6 @@ const PieceRegistry = () => {
             if (!combinedHeader) throw new Error("Nenhum cabeçalho válido encontrado.");
 
             const piecesForDb = allPiecesFromXml.map(p => {
-                // Removendo a lógica de geração de IDs, pois o XML agora deve fornecê-los
-                // Se o XML não fornecer, piece_ids será um array vazio, o que é o comportamento esperado
                 return {
                     name: p.name,
                     group: p.type,
