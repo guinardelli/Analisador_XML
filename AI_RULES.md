@@ -24,10 +24,3 @@ This document outlines the rules and conventions for AI-driven development of th
     *   Keep components focused on a single responsibility.
 *   **Icons**: Use icons from `lucide-react` to maintain visual consistency.
 *   **Forms**: Build forms using shadcn/ui components like `Input`, `Label`, and `Button`.
-
-#Obrigatório
-
-*   **Idioma do aplicativo**: português brasileiro
-*   **Capacidade da IA**: Utilize toda sua capacidade para chegar no melhor resultado.
-*   **Importante**: Evite mudar o que eu não solicitei, apenas se necessário.
-*   **Verifique**: Sempre que fizer uma mudança verifique o impacto em outras partes do aplicativo para garantir a consistência.

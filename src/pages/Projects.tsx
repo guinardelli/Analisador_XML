@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../integrations/supabase/client';
 import { Link } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Trash2, PlusCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,8 +65,13 @@ const Projects = () => {
 
     return (
         <div className="p-4 md:p-8">
-            <div className="mb-6">
+            <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold">Meus Projetos</h1>
+                <Link to="/cadastro-projetos">
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Novo Projeto
+                    </Button>
+                </Link>
             </div>
 
             {projects.length === 0 ? (
