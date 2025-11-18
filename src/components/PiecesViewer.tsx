@@ -13,8 +13,8 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import toast from 'react-hot-toast';
 import { useSession } from '@/components/SessionContextProvider';
-import { ChevronDown, ChevronUp } from 'lucide-react'; // Importar os ícones ChevronDown e ChevronUp
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Importar componentes Card
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 
 // --- TYPE DEFINITIONS ---
 interface GroupedPiece {
-    id: string; // ID da peça agrupada no banco de dados
+    id: string;
     name: string;
     group: string;
     quantity: number;
@@ -37,7 +37,7 @@ interface GroupedPiece {
 }
 
 interface IndividualPiece {
-    id: string; // Unique piece mark (e.g., P1, P2)
+    id: string;
     name: string;
     group: string;
     section: string;
@@ -46,17 +46,6 @@ interface IndividualPiece {
     unit_volume: number;
     concrete_class: string;
     is_released: boolean;
-}
-
-interface SummaryData {
-    totalPieces: number;
-    totalWeight: number;
-    totalVolume: number;
-    avgWeight: number;
-    maxWeight: number;
-    avgLength: number;
-    maxLength: number;
-    releasedCount: number;
 }
 
 interface Filters {
@@ -76,8 +65,8 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     const [pieceStatuses, setPieceStatuses] = useState<Map<string, boolean>>(new Map());
     const [isLoadingPieces, setIsLoadingPieces] = useState(true);
     const [isStatusLoading, setIsStatusLoading] = useState(true);
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set()); // Estado para grupos expandidos
-    const [isFilterOpen, setIsFilterOpen] = useState(false); // Estado para o filtro expansível
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const fetchPiecesAndStatuses = useCallback(async () => {
         if (!projectId) {
@@ -148,7 +137,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     }, [groupedPieces, pieceStatuses]);
 
     const [displayedPieces, setDisplayedPieces] = useState<IndividualPiece[]>([]);
-    const [summary, setSummary] = useState<SummaryData | null>(null);
     
     const initialFilters: Filters = { name: '', group: [], section: [], concrete_class: [] };
     const [filters, setFilters] = useState<Filters>(initialFilters);
@@ -168,36 +156,13 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
             return nameMatch && groupMatch && sectionMatch && concreteClassMatch;
         });
 
-        const totalPieces = filtered.length;
-        if (totalPieces === 0) {
-            setSummary({ totalPieces: 0, totalWeight: 0, totalVolume: 0, avgWeight: 0, maxWeight: 0, avgLength: 0, maxLength: 0, releasedCount: 0 });
-            setDisplayedPieces([]);
-            return;
-        }
-
-        const totalWeight = filtered.reduce((sum, p) => sum + p.weight, 0);
-        const totalVolume = filtered.reduce((sum, p) => sum + p.unit_volume, 0);
-        const totalLength = filtered.reduce((sum, p) => sum + p.length, 0);
-        const releasedCount = filtered.filter(p => p.is_released).length;
-
         setDisplayedPieces(filtered);
-        setSummary({
-            totalPieces,
-            totalWeight,
-            totalVolume,
-            avgWeight: totalWeight / totalPieces,
-            maxWeight: Math.max(...filtered.map(p => p.weight)),
-            avgLength: totalLength / totalPieces,
-            maxLength: Math.max(...filtered.map(p => p.length)),
-            releasedCount,
-        });
-
     }, [filters, allIndividualPieces]);
 
     useEffect(() => {
         if (allIndividualPieces.length === 0) return;
 
-        const { group, section, concrete_class } = filters; // Usar filters diretamente
+        const { group, section, concrete_class } = filters;
 
         const piecesForGroup = allIndividualPieces.filter(p =>
             (section.length === 0 || section.includes(p.section)) &&
@@ -223,7 +188,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
             concreteClasses: newConcreteClasses,
         });
 
-    }, [filters, allIndividualPieces]); // Depender de filters
+    }, [filters, allIndividualPieces]);
 
     const handleStatusChange = async (pieceId: string, newStatus: boolean) => {
         setPieceStatuses(prev => new Map(prev).set(pieceId, newStatus));
@@ -310,7 +275,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
         });
     };
 
-    // Agrupar as peças filtradas pelo nome da peça agrupada (GroupedPiece.name)
     const filteredGroupedPieces = useMemo(() => {
         const filteredGroupIds = new Set(displayedPieces.map(p => p.name));
         return groupedPieces.filter(group => filteredGroupIds.has(group.name));
@@ -360,18 +324,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
                 )}
             </Card>
 
-            {summary && (
-                <div className="bg-surface rounded-xl shadow-md border border-border-default p-6">
-                    <h2 className="text-xl font-bold text-text-primary">Resumo (Filtrado)</h2>
-                    <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-center">
-                        <div className="p-4 bg-background rounded-lg"><p className="text-xs text-text-subtle uppercase">Nº Peças</p><p className="text-2xl font-bold text-text-primary mt-1">{formatNumber(summary.totalPieces)}</p></div>
-                        <div className="p-4 bg-background rounded-lg"><p className="text-xs text-text-subtle uppercase">Liberadas</p><p className="text-2xl font-bold text-text-primary mt-1">{summary.releasedCount} / {summary.totalPieces}</p></div>
-                        <div className="p-4 bg-background rounded-lg"><p className="text-xs text-text-subtle uppercase">Peso Total</p><p className="text-2xl font-bold text-text-primary mt-1">{formatNumber(summary.totalWeight, {maximumFractionDigits: 2})} kg</p></div>
-                        <div className="p-4 bg-background rounded-lg"><p className="text-xs text-text-subtle uppercase">Volume Total</p><p className="text-2xl font-bold text-text-primary mt-1">{formatNumber(summary.totalVolume, {maximumFractionDigits: 4})} m³</p></div>
-                    </div>
-                </div>
-            )}
-
             <div className="bg-surface rounded-xl shadow-md border border-border-default overflow-hidden p-6">
                 <h2 className="text-xl font-bold text-text-primary mb-2">Detalhamento das Peças</h2>
                 <p className="text-sm text-text-subtle mb-6">Exibindo {displayedPieces.length} de {allIndividualPieces.length} peças.</p>
@@ -380,7 +332,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
                     {filteredGroupedPieces.map(group => {
                         const isExpanded = expandedGroups.has(group.id);
                         const individualPiecesInGroup = allIndividualPieces.filter(p => group.piece_ids?.includes(p.id));
-                        const totalQuantityInGroup = individualPiecesInGroup.length; // Usar o número de IDs individuais
+                        const totalQuantityInGroup = individualPiecesInGroup.length;
 
                         return (
                             <div key={group.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default">
