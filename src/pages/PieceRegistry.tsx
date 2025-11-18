@@ -152,26 +152,34 @@ const PieceRegistry = () => {
             const xmlStrings = await Promise.all(fileReadPromises);
 
             let combinedHeader: XmlHeader | null = null;
-            const allPieces: PieceFromXml[] = [];
+            const allPiecesFromXml: PieceFromXml[] = [];
             for (const xmlString of xmlStrings) {
                 const { header, pieces } = parseSingleXml(xmlString);
                 if (!combinedHeader) combinedHeader = header;
-                allPieces.push(...pieces);
+                allPiecesFromXml.push(...pieces);
             }
 
             if (!combinedHeader) throw new Error("Nenhum cabeçalho válido encontrado.");
 
-            const piecesForDb = allPieces.map(p => ({
-                name: p.name,
-                group: p.type,
-                quantity: p.quantity,
-                section: p.section,
-                length: p.length,
-                weight: p.weight,
-                unit_volume: p.unit_volume,
-                concrete_class: p.concreteClass,
-                piece_ids: p.piece_ids,
-            }));
+            const piecesForDb = allPiecesFromXml.map(p => {
+                let generatedPieceIds = p.piece_ids;
+                // Se piece_ids estiver vazio, geramos os IDs com base na quantidade
+                if (!generatedPieceIds || generatedPieceIds.length === 0) {
+                    generatedPieceIds = Array.from({ length: p.quantity }, (_, i) => `${p.name}-${i + 1}`);
+                }
+
+                return {
+                    name: p.name,
+                    group: p.type,
+                    quantity: p.quantity,
+                    section: p.section,
+                    length: p.length,
+                    weight: p.weight,
+                    unit_volume: p.unit_volume,
+                    concrete_class: p.concreteClass,
+                    piece_ids: generatedPieceIds,
+                };
+            });
 
             setXmlHeader(combinedHeader);
             setParsedPieces(piecesForDb);
