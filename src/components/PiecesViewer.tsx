@@ -12,6 +12,7 @@ import {
 } from 'chart.js';
 import { supabase } from '@/integrations/supabase/client';
 import toast from 'react-hot-toast';
+import { useSession } from '@/components/SessionContextProvider'; // Importar useSession
 
 // --- CHART.JS REGISTRATION ---
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -22,7 +23,12 @@ interface GroupedPiece {
     name: string;
     group: string;
     quantity: number;
-    section: string;
+    section: string;<think>**Diagnosing Data Fetching Issues**
+
+I'm revisiting the `PiecesViewer` component, specifically the `fetchPiecesAndStatuses` function, to debug why the user's seeing "0 of 0 pieces." Adding more detailed console logs to trace the data flow, I've explicitly checked the presence of the `user` object and incorporated `user.id` into the Supabase queries for clarity and debugging, aligning with RLS. The goal is to isolate whether the data isn't being fetched correctly or if there's a problem with RLS policies, by verifying the queries and examining the user context.
+
+
+</think>
     length: number;
     weight: number;
     unit_volume: number;
@@ -65,52 +71,71 @@ interface PiecesViewerProps {
 }
 
 const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
+    const { user } = useSession(); // Obter o usuário da sessão
     const [groupedPieces, setGroupedPieces] = useState<GroupedPiece[]>([]);
     const [pieceStatuses, setPieceStatuses] = useState<Map<string, boolean>>(new Map());
     const [isLoadingPieces, setIsLoadingPieces] = useState(true);
     const [isStatusLoading, setIsStatusLoading] = useState(true);
 
     const fetchPiecesAndStatuses = useCallback(async () => {
-        if (!projectId) return;
+        if (!projectId) {
+            console.log("PiecesViewer: projectId é nulo ou indefinido.");
+            return;
+        }
+        if (!user) { // Verificar explicitamente se o usuário está disponível
+            console.log("PiecesViewer: Usuário não disponível, não é possível buscar peças.");
+            setIsLoadingPieces(false);
+            setIsStatusLoading(false);
+            return;
+        }
 
         setIsLoadingPieces(true);
         setIsStatusLoading(true);
 
-        // Fetch grouped pieces
+        // Buscar peças agrupadas
+        console.log(`PiecesViewer: Buscando peças para o projeto ID: ${projectId} pelo usuário ID: ${user.id}`);
         const { data: piecesData, error: piecesError } = await supabase
             .from('pieces')
             .select('*')
-            .eq('project_id', projectId);
+            .eq('project_id', projectId)
+            .eq('user_id', user.id); // Filtrar explicitamente por user_id
 
         if (piecesError) {
+            console.error('PiecesViewer: Erro ao buscar peças:', piecesError);
             toast.error(`Erro ao buscar as peças: ${piecesError.message}`);
             setGroupedPieces([]);
         } else {
+            console.log('PiecesViewer: Dados de peças buscados:', piecesData);
             setGroupedPieces(piecesData || []);
         }
         setIsLoadingPieces(false);
 
-        // Fetch piece statuses
+        // Buscar status das peças
+        console.log(`PiecesViewer: Buscando status para o projeto ID: ${projectId} pelo usuário ID: ${user.id}`);
         const { data: statusesData, error: statusesError } = await supabase
             .from('piece_status')
             .select('piece_mark, is_released')
-            .eq('project_id', projectId);
+            .eq('project_id', projectId)
+            .eq('user_id', user.id); // Filtrar explicitamente por user_id
 
         if (statusesError) {
+            console.error('PiecesViewer: Erro ao buscar status:', statusesError);
             toast.error("Erro ao carregar status das peças.");
             setPieceStatuses(new Map());
         } else {
+            console.log('PiecesViewer: Dados de status buscados:', statusesData);
             const statusMap = new Map(statusesData.map(item => [item.piece_mark, item.is_released]));
             setPieceStatuses(statusMap);
         }
         setIsStatusLoading(false);
-    }, [projectId]);
+    }, [projectId, user]); // Adicionar 'user' como dependência
 
     useEffect(() => {
         fetchPiecesAndStatuses();
     }, [fetchPiecesAndStatuses]);
 
     const allIndividualPieces = useMemo((): IndividualPiece[] => {
+        console.log('PiecesViewer: allIndividualPieces sendo recalculado. groupedPieces:', groupedPieces, 'pieceStatuses:', pieceStatuses);
         return groupedPieces.flatMap(group => {
             if (!group.piece_ids) return [];
             return group.piece_ids.map(id => ({
@@ -126,6 +151,10 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
             }));
         });
     }, [groupedPieces, pieceStatuses]);
+
+    useEffect(() => {
+        console.log('PiecesViewer: allIndividualPieces atualizado:', allIndividualPieces);
+    }, [allIndividualPieces]);
 
     const [displayedPieces, setDisplayedPieces] = useState<IndividualPiece[]>([]);
     const [summary, setSummary] = useState<SummaryData | null>(null);
