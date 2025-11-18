@@ -1,14 +1,24 @@
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSession } from './SessionContextProvider';
 
 const ProtectedRoute = () => {
-  const { user, loading } = useSession();
+  const { session, isLoading } = useSession();
 
-  if (loading) {
-    return <div>Carregando...</div>;
+  if (isLoading) {
+    // Pode ser substituído por um spinner de carregamento
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <p className="text-text-secondary">Verificando autenticação...</p>
+      </div>
+    );
   }
 
-  return user ? <Outlet /> : <Navigate to="/login" />;
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

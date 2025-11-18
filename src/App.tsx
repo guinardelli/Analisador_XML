@@ -1,37 +1,40 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Projects from './pages/Projects';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
-import ProtectedRoute from './components/ProtectedRoute';
-import SessionContextProvider from './components/SessionContextProvider';
 import PieceRegistry from './pages/PieceRegistry';
-import Reports from './pages/Reports';
 import ProjectRegistry from './pages/ProjectRegistry';
+import Projects from './pages/Projects';
+import Reports from './pages/Reports';
+import Login from './pages/Login';
+import { SessionContextProvider } from './components/SessionContextProvider';
+import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
 import ProjectDetails from './pages/ProjectDetails';
+import { Toaster } from 'react-hot-toast';
 
-function App() {
-  return (
-    <SessionContextProvider>
-      <Toaster position="top-right" />
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/projetos" element={<Projects />} />
-              <Route path="/projetos/novo" element={<ProjectRegistry />} />
-              <Route path="/projetos/:projectId" element={<ProjectDetails />} />
-              <Route path="/cadastro" element={<PieceRegistry />} />
-              <Route path="/relatorios" element={<Reports />} />
-            </Route>
-          </Route>
-        </Routes>
-      </Router>
-    </SessionContextProvider>
-  );
-}
+const App = () => {
+    return (
+        <BrowserRouter>
+            <SessionContextProvider>
+                <Toaster position="top-center" />
+                <Routes>
+                    <Route path="/login" element={<Login />} />
+                    
+                    {/* Rotas Protegidas */}
+                    <Route element={<ProtectedRoute />}>
+                        <Route path="/" element={<Layout />}>
+                            <Route index element={<Home />} />
+                            <Route path="cadastro" element={<PieceRegistry />} />
+                            <Route path="cadastro-projetos" element={<ProjectRegistry />} />
+                            <Route path="projetos" element={<Projects />} />
+                            <Route path="projetos/:projectId" element={<ProjectDetails />} />
+                            <Route path="relatorios" element={<Reports />} />
+                        </Route>
+                    </Route>
+                </Routes>
+            </SessionContextProvider>
+        </BrowserRouter>
+    );
+};
 
 export default App;

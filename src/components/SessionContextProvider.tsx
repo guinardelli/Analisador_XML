@@ -1,61 +1,47 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
-interface SessionContextValue {
+interface SessionContextType {
   session: Session | null;
   user: User | null;
-  loading: boolean;
+  isLoading: boolean;
 }
 
-const SessionContext = createContext<SessionContextValue>({
-  session: null,
-  user: null,
-  loading: true,
-});
+const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
-export const useSession = () => useContext(SessionContext);
+export const useSession = () => {
+  const context = useContext(SessionContext);
+  if (context === undefined) {
+    throw new Error('useSession must be used within a SessionContextProvider');
+  }
+  return context;
+};
 
-interface SessionContextProviderProps {
-  children: ReactNode;
-}
-
-const SessionContextProvider = ({ children }: SessionContextProviderProps) => {
+export const SessionContextProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
-    };
-
-    getSession();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      setIsLoading(false);
     });
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const value = {
-    session,
-    user,
-    loading,
-  };
-
   return (
-    <SessionContext.Provider value={value}>
-      {!loading && children}
+    <SessionContext.Provider value={{ session, user, isLoading }}>
+      {children}
     </SessionContext.Provider>
   );
 };
-
-export default SessionContextProvider;

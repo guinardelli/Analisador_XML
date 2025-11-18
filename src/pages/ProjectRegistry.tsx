@@ -19,6 +19,7 @@ const ProjectRegistry = () => {
     const [address, setAddress] = useState('');
     const [area, setArea] = useState('');
     const [artNumber, setArtNumber] = useState('');
+    const [totalVolume, setTotalVolume] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
@@ -33,6 +34,7 @@ const ProjectRegistry = () => {
         setAddress('');
         setArea('');
         setArtNumber('');
+        setTotalVolume('');
         setStartDate('');
         setEndDate('');
     };
@@ -62,7 +64,7 @@ const ProjectRegistry = () => {
                 address: address || null,
                 area: area ? parseFloat(area) : null,
                 art_number: artNumber || null,
-                total_volume: 0, // Initial volume is 0, will be updated on piece import
+                total_volume: totalVolume ? parseFloat(totalVolume) : null,
                 start_date: startDate || null,
                 end_date: endDate || null,
             });
@@ -107,13 +109,7 @@ const ProjectRegistry = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="status">Status</Label>
-                                    <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-surface border border-border-default rounded-md p-2 text-sm">
-                                        <option value="Programar">Programar</option>
-                                        <option value="Em Andamento">Em Andamento</option>
-                                        <option value="Concluído">Concluído</option>
-                                        <option value="Pausado">Pausado</option>
-                                        <option value="Cancelado">Cancelado</option>
-                                    </select>
+                                    <Input id="status" value={status} onChange={(e) => setStatus(e.target.value)} />
                                 </div>
                                 <div className="space-y-2 md:col-span-2">
                                     <Label htmlFor="address">Endereço</Label>
@@ -127,6 +123,11 @@ const ProjectRegistry = () => {
                                     <Label htmlFor="artNumber">Nº ART</Label>
                                     <Input id="artNumber" placeholder="Ex: 123456789" value={artNumber} onChange={(e) => setArtNumber(e.target.value)} />
                                 </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="totalVolume">Volume Total (m³)</Label>
+                                    <Input id="totalVolume" type="number" placeholder="Ex: 350.75" value={totalVolume} onChange={(e) => setTotalVolume(e.target.value)} />
+                                </div>
+                                <div className="space-y-2"></div> {/* Empty div for alignment */}
                                 <div className="space-y-2">
                                     <Label htmlFor="startDate">Data de Início</Label>
                                     <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
