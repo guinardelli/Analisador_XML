@@ -75,7 +75,8 @@ const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: PieceFr
     if (pieceElements.length === 0) throw new Error('Nenhuma peça <PECA> encontrada no arquivo.');
 
     const pieces: PieceFromXml[] = pieceElements.map(p => {
-        const idElements = Array.from(p.querySelectorAll('LISTA_IDS ID'));
+        // CORREÇÃO AQUI: Alterado de 'LISTA_IDS ID' para 'LISTAID ID'
+        const idElements = Array.from(p.querySelectorAll('LISTAID ID'));
         const piece_ids = idElements.map(id => id.textContent || '').filter(Boolean);
 
         return {
@@ -162,12 +163,8 @@ const PieceRegistry = () => {
             if (!combinedHeader) throw new Error("Nenhum cabeçalho válido encontrado.");
 
             const piecesForDb = allPiecesFromXml.map(p => {
-                let generatedPieceIds = p.piece_ids;
-                // Se piece_ids estiver vazio, geramos os IDs com base na quantidade
-                if (!generatedPieceIds || generatedPieceIds.length === 0) {
-                    generatedPieceIds = Array.from({ length: p.quantity }, (_, i) => `${p.name}-${i + 1}`);
-                }
-
+                // Removendo a lógica de geração de IDs, pois o XML agora deve fornecê-los
+                // Se o XML não fornecer, piece_ids será um array vazio, o que é o comportamento esperado
                 return {
                     name: p.name,
                     group: p.type,
@@ -177,7 +174,7 @@ const PieceRegistry = () => {
                     weight: p.weight,
                     unit_volume: p.unit_volume,
                     concrete_class: p.concreteClass,
-                    piece_ids: generatedPieceIds,
+                    piece_ids: p.piece_ids,
                 };
             });
 

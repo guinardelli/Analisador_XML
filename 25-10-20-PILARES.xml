@@ -1,0 +1,681 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<DETALHAMENTOTEKLA obra="1864" name="TROX DO BRASIL" projetista="ENG. GUILHERME LUIZ NARDELLI">
+       <PECA>
+               <NOMEPECA>PP1</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>40x30</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1143.20</COMPRIMENTO>
+               <ALTURA>40.00</ALTURA>
+               <LARGURA>30.00</LARGURA>
+               <VOLUMEUNITARIO>1.444</VOLUMEUNITARIO>
+               <PESO>3765.95</PESO>
+               <AREA>19.03</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>1a62ee91-5b43-474c-ab1c-a901addcb472</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP2</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1430.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.474</VOLUMEUNITARIO>
+               <PESO>8783.93</PESO>
+               <AREA>39.47</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>b3ef4635-e186-43b3-b69c-91d81e194f1b</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP3</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1430.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.483</VOLUMEUNITARIO>
+               <PESO>8810.04</PESO>
+               <AREA>39.67</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>8db7fdfb-182b-445f-ab59-41d6744d0c53</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP4</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>40x30</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>695.00</COMPRIMENTO>
+               <ALTURA>40.00</ALTURA>
+               <LARGURA>30.00</LARGURA>
+               <VOLUMEUNITARIO>0.851</VOLUMEUNITARIO>
+               <PESO>2199.11</PESO>
+               <AREA>10.93</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>fb545898-303a-45f6-acc4-47da65c8f7a8</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP5</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1340.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.257</VOLUMEUNITARIO>
+               <PESO>8303.03</PESO>
+               <AREA>37.56</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>24b8322b-e948-48a0-ba47-f5e4111745d9</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP6</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1340.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.321</VOLUMEUNITARIO>
+               <PESO>8610.25</PESO>
+               <AREA>38.01</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>db77968e-dd20-42ee-a66d-74179cc4045a</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP7</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>2</QUANTIDADE>
+               <COMPRIMENTO>1440.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.466</VOLUMEUNITARIO>
+               <PESO>8815.80</PESO>
+               <AREA>39.68</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>7793f8ee-3772-4c02-aa49-f3d78fab6d38</ID>
+               <ID>c97a3bd9-9dc3-4b5d-b5f2-e438874521b4</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP8</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>2</QUANTIDADE>
+               <COMPRIMENTO>1430.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.464</VOLUMEUNITARIO>
+               <PESO>8807.10</PESO>
+               <AREA>39.16</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>cbb54868-5a86-417a-bb91-8f654649fbcc</ID>
+               <ID>cf8f7f08-a71e-41cf-a265-0c7b2a646fd5</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP9</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1440.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.466</VOLUMEUNITARIO>
+               <PESO>8822.17</PESO>
+               <AREA>39.68</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>6429b2d3-7ff9-464e-9523-ef8cf9748e56</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP10</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>2</QUANTIDADE>
+               <COMPRIMENTO>1340.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.208</VOLUMEUNITARIO>
+               <PESO>8148.69</PESO>
+               <AREA>36.34</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>0f93b3fc-d949-449d-b099-089304cc314e</ID>
+               <ID>dfe497d6-333a-4d75-b661-585ef4c590ab</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP11</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>3</QUANTIDADE>
+               <COMPRIMENTO>1330.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.207</VOLUMEUNITARIO>
+               <PESO>8135.36</PESO>
+               <AREA>35.86</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>58c76511-7d2d-4521-8dce-b1ce218f9083</ID>
+               <ID>84b1b186-2596-43b6-b9b5-df00e264f070</ID>
+               <ID>f25934b6-c44a-4d84-87cf-9600411097bb</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP12</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1340.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.310</VOLUMEUNITARIO>
+               <PESO>8637.02</PESO>
+               <AREA>30.16</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>5a9910f9-965c-4da8-bd54-0b1dc6f27768</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP13</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>70x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1355.00</COMPRIMENTO>
+               <ALTURA>70.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.882</VOLUMEUNITARIO>
+               <PESO>10225.71</PESO>
+               <AREA>33.31</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>7f18af69-6e7e-441e-b06e-37a5445fb1e3</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP14</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>70x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1345.00</COMPRIMENTO>
+               <ALTURA>70.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.881</VOLUMEUNITARIO>
+               <PESO>10214.51</PESO>
+               <AREA>32.82</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>f7456f98-68f7-492e-bc49-7b34dda4151d</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP15</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1340.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.340</VOLUMEUNITARIO>
+               <PESO>8639.89</PESO>
+               <AREA>37.89</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>f641d23f-4ec1-4b6a-ae72-3fb59e756328</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP16</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1330.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.339</VOLUMEUNITARIO>
+               <PESO>8627.92</PESO>
+               <AREA>37.40</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>cb85057b-fda6-471d-b3a0-6ecb66ffa922</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP17</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1340.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.312</VOLUMEUNITARIO>
+               <PESO>8553.47</PESO>
+               <AREA>37.09</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>4066f403-cb10-46b7-992c-464b3245a343</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP18</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>40x30</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1030.00</COMPRIMENTO>
+               <ALTURA>40.00</ALTURA>
+               <LARGURA>30.00</LARGURA>
+               <VOLUMEUNITARIO>1.324</VOLUMEUNITARIO>
+               <PESO>3453.27</PESO>
+               <AREA>17.51</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>e8833b91-aa43-43c8-ab91-0a0e7ecdf885</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP19</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1440.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.523</VOLUMEUNITARIO>
+               <PESO>8930.15</PESO>
+               <AREA>41.30</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>d9ddfb0e-5030-4ace-bd84-ed45d6b33909</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP20</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1340.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.245</VOLUMEUNITARIO>
+               <PESO>8249.88</PESO>
+               <AREA>39.55</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>9f5c137b-2f2f-4547-ad77-9d38998213f5</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP21</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1440.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.492</VOLUMEUNITARIO>
+               <PESO>8834.37</PESO>
+               <AREA>41.10</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>dadcf984-ac71-488f-85e3-70c449462317</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP22</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>50x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1310.00</COMPRIMENTO>
+               <ALTURA>50.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>2.701</VOLUMEUNITARIO>
+               <PESO>6970.66</PESO>
+               <AREA>27.04</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>9497ef2f-2bb2-4599-8b93-2fde9b35d494</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP23</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1340.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.264</VOLUMEUNITARIO>
+               <PESO>8620.42</PESO>
+               <AREA>31.22</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>23d11a23-e8a8-4f1b-966b-3a207054b189</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP24</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>2</QUANTIDADE>
+               <COMPRIMENTO>1330.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.262</VOLUMEUNITARIO>
+               <PESO>8609.22</PESO>
+               <AREA>30.73</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>1de76b70-406d-4219-b916-4f55121c85ae</ID>
+               <ID>1e2af181-0199-4bc0-b9fc-16a0532067f7</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP25</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>50x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1310.00</COMPRIMENTO>
+               <ALTURA>50.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>2.688</VOLUMEUNITARIO>
+               <PESO>6935.97</PESO>
+               <AREA>26.66</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>6cb53616-6667-480c-97a2-b57d7ed781b3</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP26</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>50x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1310.00</COMPRIMENTO>
+               <ALTURA>50.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>2.676</VOLUMEUNITARIO>
+               <PESO>6901.42</PESO>
+               <AREA>26.28</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>e3c002a7-f792-4532-8cd6-b3c0aa7ff6ad</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP27</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>40x30</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1143.20</COMPRIMENTO>
+               <ALTURA>40.00</ALTURA>
+               <LARGURA>30.00</LARGURA>
+               <VOLUMEUNITARIO>1.465</VOLUMEUNITARIO>
+               <PESO>3817.35</PESO>
+               <AREA>19.52</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>98b4243c-0f46-4a34-839c-89501461ad6d</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP28</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>40x30</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1143.20</COMPRIMENTO>
+               <ALTURA>40.00</ALTURA>
+               <LARGURA>30.00</LARGURA>
+               <VOLUMEUNITARIO>1.414</VOLUMEUNITARIO>
+               <PESO>3674.70</PESO>
+               <AREA>17.95</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>e1e5cd4d-2662-4254-90d8-2b6b0c669ac7</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP29</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>40x30</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1143.65</COMPRIMENTO>
+               <ALTURA>40.00</ALTURA>
+               <LARGURA>30.00</LARGURA>
+               <VOLUMEUNITARIO>1.415</VOLUMEUNITARIO>
+               <PESO>3679.80</PESO>
+               <AREA>17.96</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>5e0fd4d5-0e5a-4c14-ac3a-d1628124ab0c</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP30</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>60x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1330.00</COMPRIMENTO>
+               <ALTURA>60.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.261</VOLUMEUNITARIO>
+               <PESO>8312.07</PESO>
+               <AREA>37.41</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>33215abd-ea3f-4cb3-9d2e-b8905244a5e2</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP31</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>70x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1345.00</COMPRIMENTO>
+               <ALTURA>70.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>3.752</VOLUMEUNITARIO>
+               <PESO>9862.71</PESO>
+               <AREA>30.78</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>2176b59b-c050-40d2-9636-e1fdb1bbed48</ID>
+               </LISTAID>
+       </PECA>	
+       <PECA>
+               <NOMEPECA>PP32</NOMEPECA>
+               <CODCONTROLE>0</CODCONTROLE>
+               <TIPOPRODUTO>Pilar Pré-fabricado</TIPOPRODUTO>
+               <GRUPO>Pilar Pré-fabricado</GRUPO>
+               <SECAO>70x40</SECAO>
+               <QUANTIDADE>1</QUANTIDADE>
+               <COMPRIMENTO>1445.00</COMPRIMENTO>
+               <ALTURA>70.00</ALTURA>
+               <LARGURA>40.00</LARGURA>
+               <VOLUMEUNITARIO>4.049</VOLUMEUNITARIO>
+               <PESO>10635.34</PESO>
+               <AREA>33.55</AREA>
+               <CLASSECONCRETO>Fck-40</CLASSECONCRETO>
+               <ACABAMENTO></ACABAMENTO>
+               <COBRIMENTO>  </COBRIMENTO>
+               <OBS></OBS>
+               <LISTAID>
+               <ID>834cef39-19ea-4f15-872f-a941436e02d7</ID>
+               </LISTAID>
+       </PECA>	
+ </DETALHAMENTOTEKLA>
