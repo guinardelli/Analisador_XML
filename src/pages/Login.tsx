@@ -24,7 +24,7 @@ const Login = () => {
 
   return (
     <div className="flex items-center justify-center h-screen bg-background p-4">
-      <div className="w-full max-w-md bg-surface p-8 rounded-xl shadow-lg border border-border-default">
+      <div className="w-full max-w-md bg-transparent p-8 rounded-xl shadow-none border-none">
         <h1 className="text-2xl font-bold text-center text-text-primary mb-6">Acesso ao Sistema</h1>
         <Auth
           supabaseClient={supabase}
