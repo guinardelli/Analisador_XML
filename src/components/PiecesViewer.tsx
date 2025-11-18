@@ -23,12 +23,7 @@ interface GroupedPiece {
     name: string;
     group: string;
     quantity: number;
-    section: string;<think>**Diagnosing Data Fetching Issues**
-
-I'm revisiting the `PiecesViewer` component, specifically the `fetchPiecesAndStatuses` function, to debug why the user's seeing "0 of 0 pieces." Adding more detailed console logs to trace the data flow, I've explicitly checked the presence of the `user` object and incorporated `user.id` into the Supabase queries for clarity and debugging, aligning with RLS. The goal is to isolate whether the data isn't being fetched correctly or if there's a problem with RLS policies, by verifying the queries and examining the user context.
-
-
-</think>
+    section: string;
     length: number;
     weight: number;
     unit_volume: number;
