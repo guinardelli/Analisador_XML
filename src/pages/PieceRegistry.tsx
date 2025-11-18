@@ -118,7 +118,7 @@ const PieceRegistry = () => {
     const fetchProjects = useCallback(async () => {
         if (!user) return;
         const { data, error } = await supabase.from('projects').select('id, name, project_code').eq('user_id', user.id).order('name');
-        if (error) toast.error('Falha ao carregar a lista de projetos.');
+        if (error) toast.error('Falha ao carregar la lista de projetos.');
         else setProjectsList(data || []);
     }, [user]);
 
@@ -213,21 +213,48 @@ const PieceRegistry = () => {
         setIsConfirmModalOpen(false);
         setIsSavingToDb(true);
         
-        const piecesToInsert = parsedPieces.filter(p => selectedPieces.has(p.name));
+        const piecesToInsert = parsedPieces
+            .filter(p => selectedPieces.has(p.name))
+            .map(p => ({
+                ...p,
+                project_id: selectedProjectId,
+                user_id: user.id,
+            }));
 
-        const { error: rpcError } = await supabase.rpc('replace_project_pieces', {
-            p_project_id: selectedProjectId,
-            p_user_id: user.id,
-            p_pieces: piecesToInsert
-        });
+        const { error: insertError } = await supabase
+            .from('pieces')
+            .insert(piecesToInsert);
 
-        if (rpcError) {
-            toast.error(`Erro ao salvar peças: ${rpcError.message}`);
+        if (insertError) {
+            toast.error(`Erro ao salvar peças: ${insertError.message}`);
             setIsSavingToDb(false);
             return;
         }
 
-        toast.success('Peças salvas com sucesso no projeto!');
+        // Recalculate total volume
+        const { data: allPieces, error: fetchError } = await supabase
+            .from('pieces')
+            .select('quantity, unit_volume')
+            .eq('project_id', selectedProjectId);
+
+        if (fetchError) {
+            toast.error('Peças salvas, mas falha ao recalcular o volume total do projeto.');
+        } else {
+            const newTotalVolume = allPieces.reduce((acc, piece) => {
+                return acc + (piece.quantity * piece.unit_volume);
+            }, 0);
+
+            const { error: updateError } = await supabase
+                .from('projects')
+                .update({ total_volume: newTotalVolume })
+                .eq('id', selectedProjectId);
+            
+            if (updateError) {
+                toast.error('Peças salvas, mas falha ao atualizar o volume total do projeto.');
+            }
+        }
+
+        toast.success('Peças adicionadas com sucesso ao projeto!');
         navigate(`/projetos/${selectedProjectId}`);
         setIsSavingToDb(false);
     }, [user, parsedPieces, selectedPieces, navigate, selectedProjectId]);
@@ -254,7 +281,6 @@ const PieceRegistry = () => {
         
         toast.success(`Projeto "${xmlProjectName}" criado com sucesso!`);
         
-        // Atualiza a lista de projetos e seleciona o novo
         await fetchProjects();
         setSelectedProjectId(data.id);
 
@@ -402,13 +428,13 @@ const PieceRegistry = () => {
                     <DialogHeader>
                         <DialogTitle>Confirmar Importação</DialogTitle>
                         <DialogDescription>
-                            Isso substituirá todas as peças existentes neste projeto pelas {selectedPieces.size} peças selecionadas. Deseja continuar?
+                            Isso adicionará {selectedPieces.size} novas peças ao projeto. As peças existentes não serão alteradas. Deseja continuar?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)}>Cancelar</Button>
                         <Button onClick={handleInsertPiecesToDb} disabled={isSavingToDb}>
-                            {isSavingToDb ? 'Salvando...' : 'Sim, Substituir'}
+                            {isSavingToDb ? 'Salvando...' : 'Sim, Adicionar'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
