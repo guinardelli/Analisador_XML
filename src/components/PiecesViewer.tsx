@@ -132,7 +132,9 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     const allIndividualPieces = useMemo((): IndividualPiece[] => {
         console.log('PiecesViewer: allIndividualPieces sendo recalculado. groupedPieces:', groupedPieces, 'pieceStatuses:', pieceStatuses);
         return groupedPieces.flatMap(group => {
-            if (!group.piece_ids) return [];
+            // Adicionando log para inspecionar piece_ids
+            console.log(`PiecesViewer: Processando grupo "${group.name}", piece_ids:`, group.piece_ids);
+            if (!group.piece_ids || group.piece_ids.length === 0) return [];
             return group.piece_ids.map(id => ({
                 id: id,
                 name: group.name,
