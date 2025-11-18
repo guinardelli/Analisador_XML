@@ -221,6 +221,9 @@ const PieceRegistry = () => {
                 user_id: user.id,
             }));
 
+        // Adicionando log para inspecionar piece_ids antes da inserção
+        console.log('PieceRegistry: Peças a serem inseridas (com piece_ids):', piecesToInsert.map(p => ({ name: p.name, piece_ids: p.piece_ids })));
+
         const { error: insertError } = await supabase
             .from('pieces')
             .insert(piecesToInsert);
