@@ -17,9 +17,9 @@ const Layout = () => {
         <h1 className="text-xl">Meu App</h1>
         <nav className="space-x-4">
           <NavLink to="/">Início</NavLink>
-          <NavLink to="/projects">Projetos</NavLink>
-          <NavLink to="/registry">Cadastro de Peças</NavLink>
-          <NavLink to="/reports">Relatórios</NavLink>
+          <NavLink to="/projetos">Projetos</NavLink>
+          <NavLink to="/cadastro">Cadastro de Peças</NavLink>
+          <NavLink to="/relatorios">Relatórios</NavLink>
           {user && <button onClick={handleSignOut} className="p-2">Sair</button>}
         </nav>
       </header>
