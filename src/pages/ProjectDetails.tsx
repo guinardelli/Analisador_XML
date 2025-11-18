@@ -24,23 +24,10 @@ interface Project {
     end_date: string | null;
 }
 
-interface Piece {
-    name: string;
-    group: string;
-    quantity: number;
-    section: string;
-    length: number;
-    weight: number;
-    unit_volume: number;
-    concrete_class: string;
-    piece_ids: string[] | null;
-}
-
 const ProjectDetails = () => {
     const { projectId } = useParams<{ projectId: string }>();
     const [project, setProject] = useState<Project | null>(null);
     const [editableProject, setEditableProject] = useState<Partial<Project>>({});
-    const [pieces, setPieces] = useState<Piece[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -66,18 +53,6 @@ const ProjectDetails = () => {
         
         setProject(projectData);
         setEditableProject(projectData);
-
-        const { data: piecesData, error: piecesError } = await supabase
-            .from('pieces')
-            .select('*')
-            .eq('project_id', projectId);
-
-        if (piecesError) {
-            toast.error(`Erro ao buscar as peças: ${piecesError.message}`);
-        } else {
-            setPieces(piecesData || []);
-        }
-
         setIsLoading(false);
     }, [projectId]);
 
@@ -110,7 +85,7 @@ const ProjectDetails = () => {
         } else {
             toast.success('Projeto atualizado com sucesso!');
             setIsEditing(false);
-            fetchProjectData();
+            fetchProjectData(); // Re-fetch project data to get updated total_volume if any
         }
     };
 
@@ -171,7 +146,7 @@ const ProjectDetails = () => {
                     </CardContent>
                 </Card>
 
-                {projectId && <PiecesViewer initialPieces={pieces} projectId={projectId} />}
+                {projectId && <PiecesViewer projectId={projectId} />}
             </div>
         </div>
     );

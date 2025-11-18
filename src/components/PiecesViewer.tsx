@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Pie, Bar } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -18,6 +18,7 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 
 // --- TYPE DEFINITIONS ---
 interface GroupedPiece {
+    id: string; // ID da peça agrupada no banco de dados
     name: string;
     group: string;
     quantity: number;
@@ -30,7 +31,7 @@ interface GroupedPiece {
 }
 
 interface IndividualPiece {
-    id: string; // Unique piece mark
+    id: string; // Unique piece mark (e.g., P1, P2)
     name: string;
     group: string;
     section: string;
@@ -60,16 +61,57 @@ interface Filters {
 }
 
 interface PiecesViewerProps {
-    initialPieces: GroupedPiece[];
     projectId: string;
 }
 
-const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId }) => {
+const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
+    const [groupedPieces, setGroupedPieces] = useState<GroupedPiece[]>([]);
     const [pieceStatuses, setPieceStatuses] = useState<Map<string, boolean>>(new Map());
+    const [isLoadingPieces, setIsLoadingPieces] = useState(true);
     const [isStatusLoading, setIsStatusLoading] = useState(true);
 
+    const fetchPiecesAndStatuses = useCallback(async () => {
+        if (!projectId) return;
+
+        setIsLoadingPieces(true);
+        setIsStatusLoading(true);
+
+        // Fetch grouped pieces
+        const { data: piecesData, error: piecesError } = await supabase
+            .from('pieces')
+            .select('*')
+            .eq('project_id', projectId);
+
+        if (piecesError) {
+            toast.error(`Erro ao buscar as peças: ${piecesError.message}`);
+            setGroupedPieces([]);
+        } else {
+            setGroupedPieces(piecesData || []);
+        }
+        setIsLoadingPieces(false);
+
+        // Fetch piece statuses
+        const { data: statusesData, error: statusesError } = await supabase
+            .from('piece_status')
+            .select('piece_mark, is_released')
+            .eq('project_id', projectId);
+
+        if (statusesError) {
+            toast.error("Erro ao carregar status das peças.");
+            setPieceStatuses(new Map());
+        } else {
+            const statusMap = new Map(statusesData.map(item => [item.piece_mark, item.is_released]));
+            setPieceStatuses(statusMap);
+        }
+        setIsStatusLoading(false);
+    }, [projectId]);
+
+    useEffect(() => {
+        fetchPiecesAndStatuses();
+    }, [fetchPiecesAndStatuses]);
+
     const allIndividualPieces = useMemo((): IndividualPiece[] => {
-        return initialPieces.flatMap(group => {
+        return groupedPieces.flatMap(group => {
             if (!group.piece_ids) return [];
             return group.piece_ids.map(id => ({
                 id: id,
@@ -83,7 +125,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
                 is_released: pieceStatuses.get(id) || false,
             }));
         });
-    }, [initialPieces, pieceStatuses]);
+    }, [groupedPieces, pieceStatuses]);
 
     const [displayedPieces, setDisplayedPieces] = useState<IndividualPiece[]>([]);
     const [summary, setSummary] = useState<SummaryData | null>(null);
@@ -99,26 +141,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
         sections: [] as string[],
         concreteClasses: [] as string[],
     });
-
-    useEffect(() => {
-        const fetchStatuses = async () => {
-            if (!projectId) return;
-            setIsStatusLoading(true);
-            const { data, error } = await supabase
-                .from('piece_status')
-                .select('piece_mark, is_released')
-                .eq('project_id', projectId);
-
-            if (error) {
-                toast.error("Erro ao carregar status das peças.");
-            } else {
-                const statusMap = new Map(data.map(item => [item.piece_mark, item.is_released]));
-                setPieceStatuses(statusMap);
-            }
-            setIsStatusLoading(false);
-        };
-        fetchStatuses();
-    }, [projectId]);
 
     useEffect(() => {
         const filtered = allIndividualPieces.filter(piece => {
@@ -298,7 +320,15 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ initialPieces, projectId })
         </th>
     );
 
-    if (initialPieces.length === 0) {
+    if (isLoadingPieces || isStatusLoading) {
+        return (
+            <div className="bg-surface rounded-xl shadow-md border border-border-default p-6 text-center mt-8">
+                <p className="text-text-secondary">Carregando peças do projeto...</p>
+            </div>
+        );
+    }
+
+    if (groupedPieces.length === 0) {
         return (
             <div className="bg-surface rounded-xl shadow-md border border-border-default p-6 text-center mt-8">
                 <p className="text-text-secondary">Nenhuma peça cadastrada para este projeto.</p>
