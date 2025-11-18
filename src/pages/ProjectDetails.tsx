@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Edit, X, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PiecesViewer from '@/components/PiecesViewer';
+import ProjectSummaryCard from '@/components/ProjectSummaryCard';
 
 interface Project {
     id: string;
@@ -32,6 +33,7 @@ const ProjectDetails = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isSummaryOpen, setIsSummaryOpen] = useState(false);
 
     const fetchProjectData = useCallback(async () => {
         if (!projectId) return;
@@ -106,29 +108,117 @@ const ProjectDetails = () => {
                     Voltar para todos os projetos
                 </Link>
 
-                <Card>
-                    <CardHeader className="flex flex-row justify-between items-start">
-                        <div>
-                            <CardTitle className="text-2xl sm:text-3xl">{project.name}</CardTitle>
-                            <CardDescription>{project.project_code}</CardDescription>
-                        </div>
-                        {!isEditing && (
-                            <Button variant="outline" size="icon" onClick={() => setIsEditing(true)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                        )}
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">{project.name}</h1>
+                        <p className="text-text-secondary">{project.project_code}</p>
+                    </div>
+                    {!isEditing && (
+                        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                        </Button>
+                    )}
+                </div>
+
+                <ProjectSummaryCard 
+                    project={project} 
+                    isOpen={isSummaryOpen} 
+                    onToggle={() => setIsSummaryOpen(!isSummaryOpen)} 
+                />
+
+                <Card className="mb-8">
+                    <CardHeader>
+                        <CardTitle>Detalhes do Projeto</CardTitle>
+                        <CardDescription>Informações editáveis do projeto</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div className="space-y-2"><Label htmlFor="client">Cliente</Label><Input id="client" name="client" value={editableProject.client || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label htmlFor="status">Status</Label><Input id="status" name="status" value={editableProject.status || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label htmlFor="address">Endereço</Label><Input id="address" name="address" value={editableProject.address || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label htmlFor="area">Área (m²)</Label><Input id="area" name="area" type="number" value={editableProject.area || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label htmlFor="art_number">Nº ART</Label><Input id="art_number" name="art_number" value={editableProject.art_number || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label htmlFor="total_volume">Volume Total (m³)</Label><Input id="total_volume" name="total_volume" type="number" value={editableProject.total_volume || ''} readOnly className="bg-background" /></div>
-                                <div className="space-y-2"><Label htmlFor="start_date">Data de Início</Label><Input id="start_date" name="start_date" type="date" value={editableProject.start_date || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label htmlFor="end_date">Data de Término</Label><Input id="end_date" name="end_date" type="date" value={editableProject.end_date || ''} onChange={handleInputChange} readOnly={!isEditing} /></div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="client">Cliente</Label>
+                                    <Input 
+                                        id="client" 
+                                        name="client" 
+                                        value={editableProject.client || ''} 
+                                        onChange={handleInputChange} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="status">Status</Label>
+                                    <Input 
+                                        id="status" 
+                                        name="status" 
+                                        value={editableProject.status || ''} 
+                                        onChange={handleInputChange} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="address">Endereço</Label>
+                                    <Input 
+                                        id="address" 
+                                        name="address" 
+                                        value={editableProject.address || ''} 
+                                        onChange={handleInputChange} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="area">Área (m²)</Label>
+                                    <Input 
+                                        id="area" 
+                                        name="area" 
+                                        type="number" 
+                                        value={editableProject.area || ''} 
+                                        onChange={handleInputChange} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="art_number">Nº ART</Label>
+                                    <Input 
+                                        id="art_number" 
+                                        name="art_number" 
+                                        value={editableProject.art_number || ''} 
+                                        onChange={handleInputChange} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="total_volume">Volume Total (m³)</Label>
+                                    <Input 
+                                        id="total_volume" 
+                                        name="total_volume" 
+                                        type="number" 
+                                        value={editableProject.total_volume || ''} 
+                                        readOnly 
+                                        className="bg-background" 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="start_date">Data de Início</Label>
+                                    <Input 
+                                        id="start_date" 
+                                        name="start_date" 
+                                        type="date" 
+                                        value={editableProject.start_date || ''} 
+                                        onChange={handleInputChange} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="end_date">Data de Término</Label>
+                                    <Input 
+                                        id="end_date" 
+                                        name="end_date" 
+                                        type="date" 
+                                        value={editableProject.end_date || ''} 
+                                        onChange={handleInputChange} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
                             </div>
                             {isEditing && (
                                 <div className="flex justify-end pt-4 border-t border-border-default gap-3">
