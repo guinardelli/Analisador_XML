@@ -118,6 +118,45 @@
         ::-webkit-scrollbar-track { background: hsl(var(--background)); }
         ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        @media print {
+            /* Oculta a barra lateral e elementos marcados com .no-print */
+            aside, .no-print {
+                display: none !important;
+            }
+
+            /* Reseta o layout principal para impressão */
+            body, main {
+                background: #fff !important;
+                color: #000 !important;
+            }
+            
+            main {
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+            }
+            
+            /* Remove sombras e ajusta bordas dos cards */
+            .card-print {
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+                page-break-inside: avoid;
+            }
+            
+            /* Garante que os gráficos sejam visíveis e dimensionados */
+            .chart-print-container {
+                height: 300px !important;
+                width: 100% !important;
+                position: relative;
+            }
+
+            @page {
+                size: A4 landscape;
+                margin: 20mm;
+            }
+        }
     </style>
 </head>
 <body class="bg-background text-foreground min-h-screen antialiased">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Printer } from 'lucide-react';
 
 // Importações para os gráficos
 import {
@@ -18,7 +19,7 @@ import {
   Legend,
   ArcElement,
 } from 'chart.js';
-import { Bar, Pie } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 
 // Registrar componentes do Chart.js
 ChartJS.register(
@@ -57,13 +58,6 @@ interface Filters {
 }
 
 const initialFilters: Filters = { name: '', group: [], section: [], concrete_class: [] };
-
-// Cores para os gráficos
-const chartColors = [
-  '#fcc200', '#EC4899', '#10B981', '#F59E0B', 
-  '#3B82F6', '#8B5CF6', '#D946EF', '#06B6D4',
-  '#8B5CF6', '#EF4444'
-];
 
 const Reports = () => {
     const { user } = useSession();
@@ -230,7 +224,7 @@ const Reports = () => {
         return { totalPieces, releasedCount };
     }, [reportData]);
 
-    // Dados para o gráfico de distribuição por tipo de peça
+    // Dados para o gráfico de distribuição por tipo de peça (agora como gráfico de barras)
     const piecesByGroupData = useMemo(() => {
         if (reportData.length === 0) return null;
         
@@ -240,16 +234,16 @@ const Reports = () => {
         }, {} as Record<string, number>);
 
         const sortedEntries = Object.entries(groupCounts).sort(([,a],[,b]) => b - a);
-        const topEntries = sortedEntries.slice(0, 10); // Limitar a top 10 para melhor visualização
+        const topEntries = sortedEntries.slice(0, 10);
         
         return {
             labels: topEntries.map(([group]) => group),
             datasets: [{
                 label: 'Quantidade de Peças',
                 data: topEntries.map(([,count]) => count),
-                backgroundColor: chartColors.slice(0, topEntries.length),
-                borderColor: '#ffffff',
-                borderWidth: 2
+                backgroundColor: '#3B82F6',
+                borderColor: '#1D4ED8',
+                borderWidth: 1
             }]
         };
     }, [reportData]);
@@ -258,7 +252,6 @@ const Reports = () => {
     const heaviestPiecesData = useMemo(() => {
         if (reportData.length === 0) return null;
         
-        // Obter peças únicas por nome (considerando que peças com mesmo nome têm mesmo peso)
         const uniquePieces = Array.from(
             new Map(reportData.map(p => [p.name, p])).values()
         );
@@ -298,12 +291,12 @@ const Reports = () => {
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
             <div className="max-w-6xl mx-auto">
-                <header className="mb-10">
+                <header className="mb-10 no-print">
                     <h1 className="text-3xl sm:text-4xl font-bold text-text-primary">Relatórios</h1>
                     <p className="mt-3 text-base sm:text-lg text-text-secondary">Gere relatórios detalhados sobre as peças dos seus projetos.</p>
                 </header>
 
-                <Card className="mb-8">
+                <Card className="mb-8 no-print">
                     <CardHeader>
                         <CardTitle>Gerar Relatório de Peças</CardTitle>
                         <CardDescription>Selecione um projeto para visualizar o status de todas as suas peças.</CardDescription>
@@ -333,7 +326,7 @@ const Reports = () => {
                 </Card>
 
                 {rawReportData.length > 0 && (
-                    <Card className="mb-8 animate-fade-in">
+                    <Card className="mb-8 animate-fade-in no-print">
                         <CardHeader>
                             <CardTitle>Filtros de Peças</CardTitle>
                             <CardDescription>Aplique filtros para refinar o relatório do projeto: {currentProjectName}.</CardDescription>
@@ -382,14 +375,24 @@ const Reports = () => {
                     <>
                         {/* Gráficos */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                            <Card>
+                            <Card className="card-print">
                                 <CardHeader>
                                     <CardTitle>Distribuição por Tipo de Peça</CardTitle>
                                     <CardDescription>Quantidade de peças por tipo (Top 10)</CardDescription>
                                 </CardHeader>
-                                <CardContent className="h-80">
+                                <CardContent className="h-80 chart-print-container">
                                     {piecesByGroupData ? (
-                                        <Pie data={piecesByGroupData} options={chartOptions} />
+                                        <Bar 
+                                            data={piecesByGroupData} 
+                                            options={{
+                                                ...chartOptions,
+                                                indexAxis: 'y' as const,
+                                                plugins: {
+                                                    ...chartOptions.plugins,
+                                                    legend: { display: false }
+                                                }
+                                            }} 
+                                        />
                                     ) : (
                                         <div className="flex items-center justify-center h-full text-text-secondary">
                                             Nenhum dado disponível
@@ -398,12 +401,12 @@ const Reports = () => {
                                 </CardContent>
                             </Card>
                             
-                            <Card>
+                            <Card className="card-print">
                                 <CardHeader>
                                     <CardTitle>Top 10 Peças Mais Pesadas</CardTitle>
                                     <CardDescription>Peso das peças mais pesadas do projeto</CardDescription>
                                 </CardHeader>
-                                <CardContent className="h-80">
+                                <CardContent className="h-80 chart-print-container">
                                     {heaviestPiecesData ? (
                                         <Bar 
                                             data={heaviestPiecesData} 
@@ -412,9 +415,7 @@ const Reports = () => {
                                                 indexAxis: 'y' as const,
                                                 plugins: {
                                                     ...chartOptions.plugins,
-                                                    legend: {
-                                                        display: false
-                                                    }
+                                                    legend: { display: false }
                                                 }
                                             }} 
                                         />
@@ -428,14 +429,22 @@ const Reports = () => {
                         </div>
 
                         {/* Tabela de dados */}
-                        <Card className="animate-fade-in">
+                        <Card className="animate-fade-in card-print">
                             <CardHeader>
-                                <CardTitle>Relatório do Projeto: {currentProjectName}</CardTitle>
-                                <CardDescription>
-                                    Total de {summary.totalPieces} peças. 
-                                    Liberadas: {summary.releasedCount}. 
-                                    Pendentes: {summary.totalPieces - summary.releasedCount}.
-                                </CardDescription>
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <CardTitle>Relatório do Projeto: {currentProjectName}</CardTitle>
+                                        <CardDescription>
+                                            Total de {summary.totalPieces} peças. 
+                                            Liberadas: {summary.releasedCount}. 
+                                            Pendentes: {summary.totalPieces - summary.releasedCount}.
+                                        </CardDescription>
+                                    </div>
+                                    <Button onClick={() => window.print()} className="no-print">
+                                        <Printer className="h-4 w-4 mr-2" />
+                                        Imprimir
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="overflow-x-auto border rounded-lg">
