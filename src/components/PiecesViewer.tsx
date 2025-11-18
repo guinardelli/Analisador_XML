@@ -12,7 +12,8 @@ import {
 } from 'chart.js';
 import { supabase } from '@/integrations/supabase/client';
 import toast from 'react-hot-toast';
-import { useSession } from '@/components/SessionContextProvider'; // Importar useSession
+import { useSession } from '@/components/SessionContextProvider';
+import { ChevronDown } from 'lucide-react'; // Importar o ícone ChevronDown
 
 // --- CHART.JS REGISTRATION ---
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -66,18 +67,19 @@ interface PiecesViewerProps {
 }
 
 const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
-    const { user } = useSession(); // Obter o usuário da sessão
+    const { user } = useSession();
     const [groupedPieces, setGroupedPieces] = useState<GroupedPiece[]>([]);
     const [pieceStatuses, setPieceStatuses] = useState<Map<string, boolean>>(new Map());
     const [isLoadingPieces, setIsLoadingPieces] = useState(true);
     const [isStatusLoading, setIsStatusLoading] = useState(true);
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set()); // Estado para grupos expandidos
 
     const fetchPiecesAndStatuses = useCallback(async () => {
         if (!projectId) {
             console.log("PiecesViewer: projectId é nulo ou indefinido.");
             return;
         }
-        if (!user) { // Verificar explicitamente se o usuário está disponível
+        if (!user) {
             console.log("PiecesViewer: Usuário não disponível, não é possível buscar peças.");
             setIsLoadingPieces(false);
             setIsStatusLoading(false);
@@ -87,53 +89,44 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
         setIsLoadingPieces(true);
         setIsStatusLoading(true);
 
-        // Buscar peças agrupadas
-        console.log(`PiecesViewer: Buscando peças para o projeto ID: ${projectId} pelo usuário ID: ${user.id}`);
         const { data: piecesData, error: piecesError } = await supabase
             .from('pieces')
             .select('*')
             .eq('project_id', projectId)
-            .eq('user_id', user.id); // Filtrar explicitamente por user_id
+            .eq('user_id', user.id);
 
         if (piecesError) {
             console.error('PiecesViewer: Erro ao buscar peças:', piecesError);
             toast.error(`Erro ao buscar as peças: ${piecesError.message}`);
             setGroupedPieces([]);
         } else {
-            console.log('PiecesViewer: Dados de peças buscados:', piecesData);
             setGroupedPieces(piecesData || []);
         }
         setIsLoadingPieces(false);
 
-        // Buscar status das peças
-        console.log(`PiecesViewer: Buscando status para o projeto ID: ${projectId} pelo usuário ID: ${user.id}`);
         const { data: statusesData, error: statusesError } = await supabase
             .from('piece_status')
             .select('piece_mark, is_released')
             .eq('project_id', projectId)
-            .eq('user_id', user.id); // Filtrar explicitamente por user_id
+            .eq('user_id', user.id);
 
         if (statusesError) {
             console.error('PiecesViewer: Erro ao buscar status:', statusesError);
             toast.error("Erro ao carregar status das peças.");
             setPieceStatuses(new Map());
         } else {
-            console.log('PiecesViewer: Dados de status buscados:', statusesData);
             const statusMap = new Map(statusesData.map(item => [item.piece_mark, item.is_released]));
             setPieceStatuses(statusMap);
         }
         setIsStatusLoading(false);
-    }, [projectId, user]); // Adicionar 'user' como dependência
+    }, [projectId, user]);
 
     useEffect(() => {
         fetchPiecesAndStatuses();
     }, [fetchPiecesAndStatuses]);
 
     const allIndividualPieces = useMemo((): IndividualPiece[] => {
-        console.log('PiecesViewer: allIndividualPieces sendo recalculado. groupedPieces:', groupedPieces, 'pieceStatuses:', pieceStatuses);
         return groupedPieces.flatMap(group => {
-            // Adicionando log para inspecionar piece_ids
-            console.log(`PiecesViewer: Processando grupo "${group.name}", piece_ids:`, group.piece_ids);
             if (!group.piece_ids || group.piece_ids.length === 0) return [];
             return group.piece_ids.map(id => ({
                 id: id,
@@ -149,10 +142,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
         });
     }, [groupedPieces, pieceStatuses]);
 
-    useEffect(() => {
-        console.log('PiecesViewer: allIndividualPieces atualizado:', allIndividualPieces);
-    }, [allIndividualPieces]);
-
     const [displayedPieces, setDisplayedPieces] = useState<IndividualPiece[]>([]);
     const [summary, setSummary] = useState<SummaryData | null>(null);
     
@@ -160,7 +149,7 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     const [filters, setFilters] = useState<Filters>(initialFilters);
     const [stagedFilters, setStagedFilters] = useState<Filters>(initialFilters);
     
-    const [sortConfig, setSortConfig] = useState<{ key: keyof IndividualPiece | null; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
+    // Removido sortConfig e handleSort, pois não são mais necessários no novo layout
     
     const [availableOptions, setAvailableOptions] = useState({
         groups: [] as string[],
@@ -233,34 +222,6 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
         });
 
     }, [stagedFilters, allIndividualPieces]);
-
-    const sortedPieces = useMemo(() => {
-        const sortableItems = [...displayedPieces];
-        if (sortConfig.key) {
-            sortableItems.sort((a, b) => {
-                const aValue = a[sortConfig.key!];
-                const bValue = b[sortConfig.key!];
-                let comparison = 0;
-                if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
-                    comparison = aValue === bValue ? 0 : aValue ? -1 : 1;
-                } else if (typeof aValue === 'number' && typeof bValue === 'number') {
-                    comparison = aValue - bValue;
-                } else {
-                    comparison = String(aValue).localeCompare(String(bValue), undefined, { numeric: true });
-                }
-                return sortConfig.direction === 'ascending' ? comparison : -comparison;
-            });
-        }
-        return sortableItems;
-    }, [displayedPieces, sortConfig]);
-
-    const handleSort = (key: keyof IndividualPiece) => {
-        let direction: 'ascending' | 'descending' = 'ascending';
-        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
-    };
 
     const handleStatusChange = async (pieceId: string, newStatus: boolean) => {
         setPieceStatuses(prev => new Map(prev).set(pieceId, newStatus));
@@ -337,14 +298,17 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
         scales: { x: { ticks: { color: '#475569' }, grid: { color: '#e2e8f0' } }, y: { ticks: { color: '#475569' }, grid: { color: '#e2e8f0' } } }
     }), []);
 
-    const SortableHeader = ({ label, sortKey, align = 'left' }: { label: string, sortKey: keyof IndividualPiece, align?: 'left' | 'center' | 'right' }) => (
-        <th scope="col" className="px-6 py-3 cursor-pointer hover:bg-slate-100 transition-colors group" onClick={() => handleSort(sortKey)}>
-            <div className={`flex items-center ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start'}`}>
-                <span>{label}</span>
-                {sortConfig.key === sortKey && <span className="text-[10px] ml-1.5">{sortConfig.direction === 'ascending' ? '▲' : '▼'}</span>}
-            </div>
-        </th>
-    );
+    const toggleGroupExpansion = (groupId: string) => {
+        setExpandedGroups(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(groupId)) {
+                newSet.delete(groupId);
+            } else {
+                newSet.add(groupId);
+            }
+            return newSet;
+        });
+    };
 
     if (isLoadingPieces || isStatusLoading) {
         return (
@@ -361,6 +325,12 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
             </div>
         );
     }
+
+    // Agrupar as peças filtradas pelo nome da peça agrupada (GroupedPiece.name)
+    const filteredGroupedPieces = useMemo(() => {
+        const filteredGroupIds = new Set(displayedPieces.map(p => p.name));
+        return groupedPieces.filter(group => filteredGroupIds.has(group.name));
+    }, [groupedPieces, displayedPieces]);
 
     return (
         <div className="space-y-8 mt-8">
@@ -392,41 +362,85 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
                 </div>
             )}
 
-            <div className="bg-surface rounded-xl shadow-md border border-border-default overflow-hidden">
-                <div className="p-6"><h2 className="text-xl font-bold text-text-primary">Detalhamento das Peças</h2><p className="text-sm text-text-subtle mt-1">Exibindo {displayedPieces.length} de {allIndividualPieces.length} peças.</p></div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-text-secondary">
-                        <thead className="text-xs text-slate-500 uppercase bg-slate-50 select-none">
-                            <tr>
-                                <SortableHeader label="Liberada" sortKey="is_released" align="center" />
-                                <SortableHeader label="ID Peça" sortKey="id" />
-                                <SortableHeader label="Nome" sortKey="name" />
-                                <SortableHeader label="Tipo" sortKey="group" />
-                                <SortableHeader label="Seção" sortKey="section" />
-                                <SortableHeader label="Comprimento (m)" sortKey="length" align="right" />
-                                <SortableHeader label="Peso (kg)" sortKey="weight" align="right" />
-                                <SortableHeader label="Volume (m³)" sortKey="unit_volume" align="right" />
-                                <SortableHeader label="Concreto" sortKey="concrete_class" />
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border-default">
-                            {sortedPieces.map((piece) => (
-                                <tr key={piece.id} className={`hover:bg-slate-50/50 ${piece.is_released ? 'bg-green-50' : ''}`}>
-                                    <td className="px-6 py-4 text-center">
-                                        <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer" checked={piece.is_released} onChange={(e) => handleStatusChange(piece.id, e.target.checked)} />
-                                    </td>
-                                    <td className="px-6 py-4 font-semibold text-text-primary whitespace-nowrap">{piece.id}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">{piece.name}</td>
-                                    <td className="px-6 py-4">{piece.group}</td>
-                                    <td className="px-6 py-4">{piece.section}</td>
-                                    <td className="px-6 py-4 text-right">{formatNumber(piece.length / 100, {minimumFractionDigits: 2})}</td>
-                                    <td className="px-6 py-4 text-right">{formatNumber(piece.weight, {minimumFractionDigits: 2})}</td>
-                                    <td className="px-6 py-4 text-right">{formatNumber(piece.unit_volume, {minimumFractionDigits: 4})}</td>
-                                    <td className="px-6 py-4">{piece.concrete_class}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            <div className="bg-surface rounded-xl shadow-md border border-border-default overflow-hidden p-6">
+                <h2 className="text-xl font-bold text-text-primary mb-2">Detalhamento das Peças</h2>
+                <p className="text-sm text-text-subtle mb-6">Exibindo {displayedPieces.length} de {allIndividualPieces.length} peças.</p>
+                
+                <div className="space-y-3">
+                    {filteredGroupedPieces.map(group => {
+                        const isExpanded = expandedGroups.has(group.id);
+                        const individualPiecesInGroup = allIndividualPieces.filter(p => group.piece_ids?.includes(p.id));
+                        const totalQuantityInGroup = individualPiecesInGroup.length; // Usar o número de IDs individuais
+
+                        return (
+                            <div key={group.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default">
+                                <div onClick={() => toggleGroupExpansion(group.id)} className="flex justify-between items-center p-4 cursor-pointer">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3">
+                                            <h2 className="text-lg font-bold text-text-primary dark:text-white">{group.name}</h2>
+                                            <span className="text-xs font-medium px-2 py-0.5 bg-slate-100 text-text-secondary dark:bg-gray-700 dark:text-gray-300 rounded-full">
+                                                {totalQuantityInGroup} peça{totalQuantityInGroup !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 mt-3 text-sm">
+                                            <div>
+                                                <p className="text-text-secondary dark:text-text-subtle">Tipo</p>
+                                                <p className="font-medium text-text-primary dark:text-gray-200">{group.group}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-text-secondary dark:text-text-subtle">Seção</p>
+                                                <p className="font-medium text-text-primary dark:text-gray-200">{group.section}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-text-secondary dark:text-text-subtle">Peso (Kg)</p>
+                                                <p className="font-medium text-text-primary dark:text-gray-200">{formatNumber(group.weight, {minimumFractionDigits: 2})}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-text-secondary dark:text-text-subtle">Volume (m³)</p>
+                                                <p className="font-medium text-text-primary dark:text-gray-200">{formatNumber(group.unit_volume, {minimumFractionDigits: 4})}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <ChevronDown className={`w-5 h-5 text-text-secondary dark:text-text-subtle transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                </div>
+                                {isExpanded && (
+                                    <div className="border-t border-border-default dark:border-gray-700 divide-y divide-border-default dark:divide-gray-700">
+                                        {individualPiecesInGroup.map(individualPiece => (
+                                            <div key={individualPiece.id} className="px-4 py-3 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-gray-700/50">
+                                                <input
+                                                    className="h-5 w-5 rounded border-slate-300 dark:border-gray-600 text-primary focus:ring-primary dark:bg-gray-800 dark:checked:bg-primary"
+                                                    type="checkbox"
+                                                    checked={individualPiece.is_released}
+                                                    onChange={(e) => handleStatusChange(individualPiece.id, e.target.checked)}
+                                                />
+                                                <div className="flex-1 overflow-hidden">
+                                                    <p className="font-mono text-xs text-text-secondary dark:text-text-subtle truncate">{individualPiece.id}</p>
+                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
+                                                        <div>
+                                                            <p className="text-text-secondary dark:text-text-subtle text-xs">Tipo</p>
+                                                            <p className="font-medium text-text-primary dark:text-gray-200">{individualPiece.group}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-text-secondary dark:text-text-subtle text-xs">Seção</p>
+                                                            <p className="font-medium text-text-primary dark:text-gray-200">{individualPiece.section}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-text-secondary dark:text-text-subtle text-xs">Peso (Kg)</p>
+                                                            <p className="font-medium text-text-primary dark:text-gray-200">{formatNumber(individualPiece.weight, {minimumFractionDigits: 2})}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-text-secondary dark:text-text-subtle text-xs">Volume (m³)</p>
+                                                            <p className="font-medium text-text-primary dark:text-gray-200">{formatNumber(individualPiece.unit_volume, {minimumFractionDigits: 4})}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
