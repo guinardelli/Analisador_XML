@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSession } from '@/components/SessionContextProvider';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input'; // Importar Input
 
 interface Project {
     id: string;
@@ -21,16 +22,34 @@ interface ReportPiece {
     unit_volume: number;
     is_released: boolean;
     released_at: string | null;
+    concrete_class: string; // Adicionado para filtro
 }
+
+interface Filters {
+    name: string;
+    group: string[];
+    section: string[];
+    concrete_class: string[];
+}
+
+const initialFilters: Filters = { name: '', group: [], section: [], concrete_class: [] };
 
 const Reports = () => {
     const { user } = useSession();
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-    const [reportData, setReportData] = useState<ReportPiece[]>([]);
+    const [rawReportData, setRawReportData] = useState<ReportPiece[]>([]); // Dados brutos antes dos filtros
+    const [reportData, setReportData] = useState<ReportPiece[]>([]); // Dados filtrados para exibição
     const [isLoadingProjects, setIsLoadingProjects] = useState(true);
     const [isLoadingReport, setIsLoadingReport] = useState(false);
     const [currentProjectName, setCurrentProjectName] = useState('');
+
+    const [filters, setFilters] = useState<Filters>(initialFilters);
+    const [availableOptions, setAvailableOptions] = useState({
+        groups: [] as string[],
+        sections: [] as string[],
+        concreteClasses: [] as string[],
+    });
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -59,7 +78,9 @@ const Reports = () => {
             return;
         }
         setIsLoadingReport(true);
-        setReportData([]);
+        setRawReportData([]); // Limpa dados brutos
+        setReportData([]); // Limpa dados exibidos
+        setFilters(initialFilters); // Reseta filtros ao gerar novo relatório
 
         const selectedProject = projects.find(p => p.id === selectedProjectId);
         setCurrentProjectName(selectedProject ? `${selectedProject.name} (${selectedProject.project_code})` : '');
@@ -67,7 +88,7 @@ const Reports = () => {
         // 1. Fetch all grouped pieces for the project
         const { data: groupedPieces, error: piecesError } = await supabase
             .from('pieces')
-            .select('name, group, section, weight, unit_volume, piece_ids')
+            .select('name, group, section, weight, unit_volume, piece_ids, concrete_class') // Incluir concrete_class
             .eq('project_id', selectedProjectId);
 
         if (piecesError) {
@@ -105,6 +126,7 @@ const Reports = () => {
                         unit_volume: group.unit_volume,
                         is_released: status.is_released,
                         released_at: status.released_at,
+                        concrete_class: group.concrete_class,
                     });
                 });
             }
@@ -113,10 +135,39 @@ const Reports = () => {
         // Sort by piece ID
         allPieces.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
 
-        setReportData(allPieces);
+        setRawReportData(allPieces); // Armazena todos os dados brutos
+        
+        // Popula as opções de filtro disponíveis
+        const uniqueGroups = [...new Set(allPieces.map(p => p.group))].sort();
+        const uniqueSections = [...new Set(allPieces.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+        const uniqueConcreteClasses = [...new Set(allPieces.map(p => p.concrete_class))].sort();
+        setAvailableOptions({
+            groups: uniqueGroups,
+            sections: uniqueSections,
+            concreteClasses: uniqueConcreteClasses,
+        });
+
         setIsLoadingReport(false);
-        toast.success(`Relatório gerado para ${allPieces.length} peças.`);
+        toast.success(`Dados do relatório carregados.`);
     };
+
+    // Efeito para aplicar os filtros sempre que rawReportData ou filters mudarem
+    useEffect(() => {
+        if (rawReportData.length === 0) {
+            setReportData([]);
+            return;
+        }
+
+        const filtered = rawReportData.filter(piece => {
+            const nameMatch = filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
+            const groupMatch = filters.group.length > 0 ? filters.group.includes(piece.group) : true;
+            const sectionMatch = filters.section.length > 0 ? filters.section.includes(piece.section) : true;
+            const concreteClassMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
+            return nameMatch && groupMatch && sectionMatch && concreteClassMatch;
+        });
+
+        setReportData(filtered);
+    }, [rawReportData, filters]);
     
     const formatBRLDate = (dateString: string | null) => {
         if (!dateString) return 'N/A';
@@ -126,6 +177,27 @@ const Reports = () => {
             return 'Data inválida';
         }
     };
+
+    const handleFilterCheckboxChange = (field: 'group' | 'section' | 'concrete_class', value: string) => {
+        setFilters(prev => {
+            const currentValues = prev[field];
+            const newValues = currentValues.includes(value) ? currentValues.filter(v => v !== value) : [...currentValues, value];
+            return {...prev, [field]: newValues};
+        });
+    };
+
+    const handleClearFilters = () => {
+        setFilters(initialFilters);
+    };
+
+    const summary = useMemo(() => {
+        if (reportData.length === 0) {
+            return { totalPieces: 0, releasedCount: 0 };
+        }
+        const totalPieces = reportData.length;
+        const releasedCount = reportData.filter(p => p.is_released).length;
+        return { totalPieces, releasedCount };
+    }, [reportData]);
 
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -164,14 +236,60 @@ const Reports = () => {
                     </CardContent>
                 </Card>
 
+                {rawReportData.length > 0 && ( // Mostrar filtros apenas se houver dados brutos carregados
+                    <Card className="mb-8 animate-fade-in">
+                        <CardHeader>
+                            <CardTitle>Filtros de Peças</CardTitle>
+                            <CardDescription>Aplique filtros para refinar o relatório do projeto: {currentProjectName}.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="filter-name">Nome da Peça</Label>
+                                    <Input
+                                        id="filter-name"
+                                        placeholder="Filtrar por nome da peça..."
+                                        value={filters.name}
+                                        onChange={(e) => setFilters(prev => ({ ...prev, name: e.target.value }))}
+                                        className="w-full"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {[{ id: 'group', label: 'Tipo', options: availableOptions.groups, selected: filters.group }, { id: 'section', label: 'Seção', options: availableOptions.sections, selected: filters.section }, { id: 'concrete_class', label: 'Concreto', options: availableOptions.concreteClasses, selected: filters.concrete_class }].map(filterGroup => (
+                                        <div key={filterGroup.id}>
+                                            <Label className="block text-sm font-medium text-text-secondary mb-1">{filterGroup.label} {filterGroup.selected.length > 0 && `(${filterGroup.selected.length})`}</Label>
+                                            <div className="h-32 overflow-y-auto p-2 border border-border-default rounded-lg bg-background space-y-1">
+                                                {filterGroup.options.map(opt => (
+                                                    <label key={opt} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filterGroup.selected.includes(opt)}
+                                                            onChange={() => handleFilterCheckboxChange(filterGroup.id as 'group' | 'section' | 'concrete_class', opt)}
+                                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                        />
+                                                        <span>{opt}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex justify-end gap-3 pt-4 border-t border-border-default">
+                                    <Button variant="outline" onClick={handleClearFilters}>Limpar Filtros</Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {reportData.length > 0 && (
                     <Card className="animate-fade-in">
                         <CardHeader>
                             <CardTitle>Relatório do Projeto: {currentProjectName}</CardTitle>
                             <CardDescription>
-                                Total de {reportData.length} peças. 
-                                Liberadas: {reportData.filter(p => p.is_released).length}. 
-                                Pendentes: {reportData.filter(p => !p.is_released).length}.
+                                Total de {summary.totalPieces} peças. 
+                                Liberadas: {summary.releasedCount}. 
+                                Pendentes: {summary.totalPieces - summary.releasedCount}.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -182,6 +300,8 @@ const Reports = () => {
                                             <th className="p-3 text-left font-semibold text-text-secondary">ID Peça</th>
                                             <th className="p-3 text-left font-semibold text-text-secondary">Nome</th>
                                             <th className="p-3 text-left font-semibold text-text-secondary">Tipo</th>
+                                            <th className="p-3 text-left font-semibold text-text-secondary">Seção</th>
+                                            <th className="p-3 text-left font-semibold text-text-secondary">Concreto</th>
                                             <th className="p-3 text-center font-semibold text-text-secondary">Status</th>
                                             <th className="p-3 text-left font-semibold text-text-secondary">Data Liberação</th>
                                             <th className="p-3 text-right font-semibold text-text-secondary">Peso (kg)</th>
@@ -194,6 +314,8 @@ const Reports = () => {
                                                 <td className="p-3 font-medium text-text-primary">{piece.id}</td>
                                                 <td className="p-3 text-text-secondary">{piece.name}</td>
                                                 <td className="p-3 text-text-secondary">{piece.group}</td>
+                                                <td className="p-3 text-text-secondary">{piece.section}</td>
+                                                <td className="p-3 text-text-secondary">{piece.concrete_class}</td>
                                                 <td className="p-3 text-center">
                                                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                                                         piece.is_released 
