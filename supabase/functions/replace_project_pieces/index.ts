@@ -1,14 +1,6 @@
 // Importar tipos do módulo padrão do Deno
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
-
-// Definir tipos para nossa função
-interface WebhookPayload {
-  type: 'INSERT' | 'UPDATE' | 'DELETE'
-  table: string
-  record: any
-  old_record: any
-  schema: string
-}
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 interface PieceData {
   name: string
@@ -49,7 +41,6 @@ serve(async (req) => {
     }
 
     // Conectar ao banco de dados
-    const (createClient) = await import('https://esm.sh/@supabase/supabase-js@2.45.0')
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
