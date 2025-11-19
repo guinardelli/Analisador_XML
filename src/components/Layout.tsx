@@ -42,34 +42,34 @@ const Sidebar = () => {
                 </div>
                 <nav className="flex-grow p-2 space-y-1">
                     <NavLink to="/" end className={navLinkClasses}>
-                        <Home className="w-5 h-5 mx-auto" />
-                        {!isCollapsed && <span className="ml-3"> Início</span>}
+                        <Home className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="ml-3">Início</span>}
                     </NavLink>
                     <NavLink to="/cadastro" className={navLinkClasses}>
-                        <Boxes className="w-5 h-5 mx-auto" />
-                        {!isCollapsed && <span className="ml-3"> Cadastrar Peças</span>}
+                        <Boxes className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="ml-3">Cadastrar Peças</span>}
                     </NavLink>
                     <NavLink to="/cadastro-projetos" className={navLinkClasses}>
-                        <FolderPlus className="w-5 h-5 mx-auto" />
-                        {!isCollapsed && <span className="ml-3"> Cadastro de Projetos</span>}
+                        <FolderPlus className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="ml-3">Cadastro de Projetos</span>}
                     </NavLink>
                     <NavLink to="/projetos" className={navLinkClasses}>
-                        <LayoutGrid className="w-5 h-5 mx-auto" />
-                        {!isCollapsed && <span className="ml-3"> Projetos</span>}
+                        <LayoutGrid className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="ml-3">Projetos</span>}
                     </NavLink>
                     <NavLink to="/clientes" className={navLinkClasses}>
-                        <Users className="w-5 h-5 mx-auto" />
-                        {!isCollapsed && <span className="ml-3"> Clientes</span>}
+                        <Users className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="ml-3">Clientes</span>}
                     </NavLink>
                     <NavLink to="/relatorios" className={navLinkClasses}>
-                        <FileText className="w-5 h-5 mx-auto" />
-                        {!isCollapsed && <span className="ml-3"> Relatórios</span>}
+                        <FileText className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="ml-3">Relatórios</span>}
                     </NavLink>
                 </nav>
                 <div className="p-2 border-t border-border-default">
                     <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-text-secondary hover:bg-slate-200 hover:text-text-primary">
-                        <LogOut className="w-5 h-5 mx-auto" />
-                        {!isCollapsed && <span className="ml-3"> Sair</span>}
+                        <LogOut className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="ml-3">Sair</span>}
                     </Button>
                 </div>
             </aside>
