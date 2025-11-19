@@ -10,6 +10,8 @@ import { SessionContextProvider } from './components/SessionContextProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import ProjectDetails from './pages/ProjectDetails';
+import Clientes from './pages/Clientes';
+import CadastroCliente from './pages/CadastroCliente';
 import { Toaster } from 'react-hot-toast';
 
 const App = () => {
@@ -29,6 +31,8 @@ const App = () => {
                             <Route path="projetos" element={<Projects />} />
                             <Route path="projetos/:projectId" element={<ProjectDetails />} />
                             <Route path="relatorios" element={<Reports />} />
+                            <Route path="clientes" element={<Clientes />} />
+                            <Route path="cadastro-cliente" element={<CadastroCliente />} />
                         </Route>
                     </Route>
                 </Routes>
