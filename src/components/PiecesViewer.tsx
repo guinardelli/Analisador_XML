@@ -13,11 +13,13 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import toast from 'react-hot-toast';
 import { useSession } from '@/components/SessionContextProvider';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 // --- CHART.JS REGISTRATION ---
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -67,6 +69,8 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
     const [isStatusLoading, setIsStatusLoading] = useState(true);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [groupToDelete, setGroupToDelete] = useState<GroupedPiece | null>(null);
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
     const fetchPiecesAndStatuses = useCallback(async () => {
         if (!projectId) {
@@ -229,6 +233,50 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
         setFilters(initialFilters);
     };
 
+    const handleDeleteGroup = (group: GroupedPiece) => {
+        setGroupToDelete(group);
+        setIsDeleteConfirmOpen(true);
+    };
+
+    const confirmDeleteGroup = async () => {
+        if (!groupToDelete || !user) return;
+
+        const toastId = toast.loading('Excluindo peças...');
+
+        try {
+            // 1. Delete individual piece statuses
+            if (groupToDelete.piece_ids && groupToDelete.piece_ids.length > 0) {
+                const { error: statusError } = await supabase
+                    .from('piece_status')
+                    .delete()
+                    .eq('project_id', projectId)
+                    .in('piece_mark', groupToDelete.piece_ids);
+
+                if (statusError) throw statusError;
+            }
+
+            // 2. Delete the grouped piece
+            const { error: pieceError } = await supabase
+                .from('pieces')
+                .delete()
+                .eq('id', groupToDelete.id);
+
+            if (pieceError) throw pieceError;
+
+            toast.success(`Grupo de peças "${groupToDelete.name}" excluído.`, { id: toastId });
+            
+            // 3. Refresh data
+            fetchPiecesAndStatuses();
+
+        } catch (error) {
+            console.error('Erro ao excluir grupo de peças:', error);
+            toast.error('Falha ao excluir o grupo de peças.', { id: toastId });
+        } finally {
+            setIsDeleteConfirmOpen(false);
+            setGroupToDelete(null);
+        }
+    };
+
     const formatNumber = (num: number, options?: Intl.NumberFormatOptions) => num.toLocaleString('pt-BR', options);
 
     const chartColors = ['#fcc200', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#D946EF', '#06B6D4'];
@@ -336,8 +384,8 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
 
                         return (
                             <div key={group.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default">
-                                <div onClick={() => toggleGroupExpansion(group.id)} className="flex justify-between items-center p-4 cursor-pointer">
-                                    <div className="flex-1">
+                                <div className="flex justify-between items-center p-4">
+                                    <div className="flex-1 cursor-pointer" onClick={() => toggleGroupExpansion(group.id)}>
                                         <div className="flex items-center gap-3">
                                             <h2 className="text-lg font-bold text-text-primary dark:text-white">{group.name}</h2>
                                             <span className="text-xs font-medium px-2 py-0.5 bg-slate-100 text-text-secondary dark:bg-gray-700 dark:text-gray-300 rounded-full">
@@ -363,7 +411,14 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
                                             </div>
                                         </div>
                                     </div>
-                                    <ChevronDown className={`w-5 h-5 text-text-secondary dark:text-text-subtle transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group); }}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleGroupExpansion(group.id)}>
+                                            <ChevronDown className={`w-5 h-5 text-text-secondary dark:text-text-subtle transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                        </Button>
+                                    </div>
                                 </div>
                                 {isExpanded && (
                                     <div className="border-t border-border-default dark:border-gray-700 divide-y divide-border-default dark:divide-gray-700">
@@ -413,6 +468,21 @@ const PiecesViewer: React.FC<PiecesViewerProps> = ({ projectId }) => {
                     <div className="min-h-[450px] relative">{heaviestPartsData && <Bar data={heaviestPartsData} options={{...chartOptions, indexAxis: 'y', plugins: {...chartOptions.plugins, legend: {display: false}, title: {...chartOptions.plugins.title, text: 'Top 10 Peças mais Pesadas'}}}} />}</div>
                 </div>
             </div>
+
+            <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tem certeza que deseja excluir o grupo de peças <strong>{groupToDelete?.name}</strong> e todas as suas <strong>{groupToDelete?.piece_ids?.length || 0}</strong> peças individuais? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsDeleteConfirmOpen(false)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDeleteGroup} className="bg-red-600 hover:bg-red-700">Excluir</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
