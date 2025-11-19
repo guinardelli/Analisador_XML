@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, Boxes, FolderPlus, LayoutGrid, FileText, LogOut, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Boxes, FolderPlus, LayoutGrid, FileText, LogOut, Users, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from './ui/button';
 
@@ -45,9 +45,9 @@ const Sidebar = () => {
                         <Home className="w-5 h-5 flex-shrink-0" />
                         {!isCollapsed && <span className="ml-3">Início</span>}
                     </NavLink>
-                    <NavLink to="/cadastro" className={navLinkClasses}>
-                        <Boxes className="w-5 h-5 flex-shrink-0" />
-                        {!isCollapsed && <span className="ml-3">Cadastrar Peças</span>}
+                    <NavLink to="/importar-xml" className={navLinkClasses}>
+                        <Upload className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && <span className="ml-3">Importar XML</span>}
                     </NavLink>
                     <NavLink to="/cadastro-projetos" className={navLinkClasses}>
                         <FolderPlus className="w-5 h-5 flex-shrink-0" />

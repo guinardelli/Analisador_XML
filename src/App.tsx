@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
-import PieceRegistry from './pages/PieceRegistry';
+import ImportacaoXML from './pages/ImportacaoXML';
 import ProjectRegistry from './pages/ProjectRegistry';
 import Projects from './pages/Projects';
 import Reports from './pages/Reports';
@@ -26,7 +26,7 @@ const App = () => {
                     <Route element={<ProtectedRoute />}>
                         <Route path="/" element={<Layout />}>
                             <Route index element={<Home />} />
-                            <Route path="cadastro" element={<PieceRegistry />} />
+                            <Route path="importar-xml" element={<ImportacaoXML />} />
                             <Route path="cadastro-projetos" element={<ProjectRegistry />} />
                             <Route path="projetos" element={<Projects />} />
                             <Route path="projetos/:projectId" element={<ProjectDetails />} />
