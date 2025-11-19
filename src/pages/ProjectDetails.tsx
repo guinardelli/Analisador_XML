@@ -1,10 +1,41 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Package, Scale, Ruler, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PiecesViewer from '@/components/PiecesViewer';
 import ProjectSummaryCard from '@/components/ProjectSummaryCard';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
+// Importações para os gráficos
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  Filler,
+} from 'chart.js';
+import { Doughnut, Line, Bar } from 'react-chartjs-2';
+
+// Registrar componentes do Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement,
+  Filler
+);
 
 interface Project {
     id: string;
@@ -38,9 +69,14 @@ const ProjectDetails = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isSummaryOpen, setIsSummaryOpen] = useState(false); // Alterado para false por padrão
+    const [isSummaryOpen, setIsSummaryOpen] = useState(false);
     const [metrics, setMetrics] = useState<ProjectMetrics | null>(null);
     const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
+
+    // State for chart data
+    const [progressChartData, setProgressChartData] = useState<any>(null);
+    const [progressOverTimeData, setProgressOverTimeData] = useState<any>(null);
+    const [weightByGroupData, setWeightByGroupData] = useState<any>(null);
 
     const fetchProjectData = useCallback(async () => {
         if (!projectId) return;
@@ -70,7 +106,6 @@ const ProjectDetails = () => {
 
         setIsLoadingMetrics(true);
 
-        // Buscar todas as peças do projeto
         const { data: pieces, error: piecesError } = await supabase
             .from('pieces')
             .select('quantity, weight, unit_volume, group, section, piece_ids')
@@ -82,10 +117,9 @@ const ProjectDetails = () => {
             return;
         }
 
-        // Buscar peças liberadas
         const { data: releasedPieces, error: releasedError } = await supabase
             .from('piece_status')
-            .select('piece_mark')
+            .select('piece_mark, released_at')
             .eq('project_id', projectId)
             .eq('is_released', true);
 
@@ -95,21 +129,24 @@ const ProjectDetails = () => {
             return;
         }
 
-        // Calcular métricas
         let totalPieces = 0;
         let totalWeight = 0;
         let totalVolume = 0;
         const groups = new Set<string>();
         const sections = new Set<string>();
+        const weightByGroup: { [key: string]: number } = {};
         
         pieces.forEach(piece => {
-            // Contar peças individuais
             const pieceCount = piece.piece_ids ? piece.piece_ids.length : piece.quantity;
             totalPieces += pieceCount;
-            totalWeight += piece.weight * pieceCount;
-            totalVolume += piece.unit_volume * pieceCount;
+            totalWeight += (piece.weight || 0) * pieceCount;
+            totalVolume += (piece.unit_volume || 0) * pieceCount;
             groups.add(piece.group);
             sections.add(piece.section);
+
+            if (piece.group) {
+                weightByGroup[piece.group] = (weightByGroup[piece.group] || 0) + (piece.weight || 0) * pieceCount;
+            }
         });
 
         const releasedCount = releasedPieces ? releasedPieces.length : 0;
@@ -121,6 +158,56 @@ const ProjectDetails = () => {
             uniqueGroups: groups.size,
             uniqueSections: sections.size,
             releasedPieces: releasedCount
+        });
+
+        // --- Process data for charts ---
+
+        // 1. Progress Doughnut Chart
+        setProgressChartData({
+            labels: ['Liberadas', 'Pendentes'],
+            datasets: [{
+                data: [releasedCount, totalPieces - releasedCount],
+                backgroundColor: ['#10B981', '#F59E0B'],
+                borderColor: ['#ffffff'],
+                borderWidth: 2,
+            }]
+        });
+
+        // 2. Progress Over Time Line Chart
+        const releasesByDate: { [key: string]: number } = {};
+        releasedPieces.forEach(p => {
+            if (p.released_at) {
+                const date = new Date(p.released_at).toISOString().split('T')[0];
+                releasesByDate[date] = (releasesByDate[date] || 0) + 1;
+            }
+        });
+        const sortedDates = Object.keys(releasesByDate).sort();
+        let cumulativeCount = 0;
+        const cumulativeData = sortedDates.map(date => {
+            cumulativeCount += releasesByDate[date];
+            return cumulativeCount;
+        });
+        setProgressOverTimeData({
+            labels: sortedDates.map(d => new Date(d).toLocaleDateString('pt-BR')),
+            datasets: [{
+                label: 'Peças Liberadas (Acumulado)',
+                data: cumulativeData,
+                fill: true,
+                borderColor: '#3B82F6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.1
+            }]
+        });
+
+        // 3. Weight by Group Bar Chart
+        const sortedWeightByGroup = Object.entries(weightByGroup).sort(([,a], [,b]) => b - a);
+        setWeightByGroupData({
+            labels: sortedWeightByGroup.map(([group]) => group),
+            datasets: [{
+                label: 'Peso Total (kg)',
+                data: sortedWeightByGroup.map(([, weight]) => weight),
+                backgroundColor: '#8B5CF6',
+            }]
         });
 
         setIsLoadingMetrics(false);
@@ -181,6 +268,16 @@ const ProjectDetails = () => {
     if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
     if (!project) return <div className="p-8 text-center">Projeto não encontrado.</div>;
 
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+        },
+    };
+
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
             <div className="max-w-6xl mx-auto">
@@ -194,8 +291,8 @@ const ProjectDetails = () => {
                     <p className="text-text-secondary">{project.project_code}</p>
                 </div>
 
-                {/* Resumo do Projeto */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {/* Summary Cards */}
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default p-4">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -209,7 +306,6 @@ const ProjectDetails = () => {
                             </div>
                         </div>
                     </div>
-                    
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default p-4">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
@@ -223,7 +319,6 @@ const ProjectDetails = () => {
                             </div>
                         </div>
                     </div>
-                    
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default p-4">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
@@ -237,7 +332,6 @@ const ProjectDetails = () => {
                             </div>
                         </div>
                     </div>
-                    
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-border-default p-4">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
@@ -251,6 +345,37 @@ const ProjectDetails = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Gráficos de Análise */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Progresso Geral</CardTitle>
+                            <CardDescription>Visão geral de peças liberadas vs. pendentes.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-64">
+                            {progressChartData && <Doughnut data={progressChartData} options={chartOptions} />}
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Peso por Tipo de Peça</CardTitle>
+                            <CardDescription>Distribuição do peso total entre os tipos de peças.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-64">
+                            {weightByGroupData && <Bar data={weightByGroupData} options={chartOptions} />}
+                        </CardContent>
+                    </Card>
+                    <Card className="lg:col-span-2">
+                        <CardHeader>
+                            <CardTitle>Progresso ao Longo do Tempo</CardTitle>
+                            <CardDescription>Acompanhe a evolução da liberação de peças.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="h-64">
+                            {progressOverTimeData && <Line data={progressOverTimeData} options={chartOptions} />}
+                        </CardContent>
+                    </Card>
                 </div>
 
                 <ProjectSummaryCard 
