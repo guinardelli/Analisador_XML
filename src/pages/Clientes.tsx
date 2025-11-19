@@ -19,15 +19,18 @@ interface Client {
   name: string;
   email: string | null;
   phone: string | null;
+  address: string | null;
   created_at: string;
 }
 
 interface Project {
   id: string;
   name: string;
-  location: string | null;
+  project_code: string;
+  address: string | null;
   start_date: string | null;
   status: string;
+  total_volume: number | null;
 }
 
 const Clientes = () => {
@@ -67,10 +70,15 @@ const Clientes = () => {
 
     const fetchClientProjects = async (clientId: string) => {
         try {
+            // Buscar projetos associados ao cliente pelo nome
+            const client = clients.find(c => c.id === clientId);
+            if (!client) return;
+
             const { data, error } = await supabase
                 .from('projects')
                 .select('*')
-                .eq('client_id', clientId)
+                .eq('user_id', user?.id)
+                .eq('client', client.name)
                 .order('name');
             
             if (error) throw error;
@@ -118,6 +126,14 @@ const Clientes = () => {
             case 'planejamento': return 'Planejamento';
             default: return status;
         }
+    };
+
+    const formatNumber = (num: number | null | undefined, decimals: number = 2) => {
+        if (num === null || num === undefined) return 'N/A';
+        return num.toLocaleString('pt-BR', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
     };
 
     return (
@@ -191,6 +207,9 @@ const Clientes = () => {
                                                 {client.email && (
                                                     <p className="text-text-secondary">{client.email}</p>
                                                 )}
+                                                {client.phone && (
+                                                    <p className="text-text-secondary">{client.phone}</p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center">
@@ -217,16 +236,24 @@ const Clientes = () => {
                                                                 <div className="flex items-start justify-between">
                                                                     <div>
                                                                         <h5 className="font-medium text-text-primary">{project.name}</h5>
-                                                                        {project.location && (
+                                                                        <p className="text-sm text-text-secondary mt-1">
+                                                                            Código: {project.project_code}
+                                                                        </p>
+                                                                        {project.address && (
                                                                             <div className="flex items-center mt-2 text-sm text-text-secondary">
                                                                                 <MapPin className="h-4 w-4 mr-1" />
-                                                                                {project.location}
+                                                                                {project.address}
                                                                             </div>
                                                                         )}
                                                                         {project.start_date && (
                                                                             <div className="flex items-center mt-1 text-sm text-text-secondary">
                                                                                 <Calendar className="h-4 w-4 mr-1" />
                                                                                 {new Date(project.start_date).toLocaleDateString()}
+                                                                            </div>
+                                                                        )}
+                                                                        {project.total_volume && (
+                                                                            <div className="flex items-center mt-1 text-sm text-text-secondary">
+                                                                                <span>Volume: {formatNumber(project.total_volume, 3)} m³</span>
                                                                             </div>
                                                                         )}
                                                                     </div>
@@ -238,7 +265,7 @@ const Clientes = () => {
                                                                     variant="outline" 
                                                                     size="sm" 
                                                                     className="w-full mt-4"
-                                                                    onClick={() => navigate(`/projeto/${project.id}`)}
+                                                                    onClick={() => navigate(`/projetos/${project.id}`)}
                                                                 >
                                                                     <Building className="h-4 w-4 mr-2" />
                                                                     Ver Detalhes

@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 // --- TYPE DEFINITIONS ---
 interface PieceFromXml {
@@ -121,6 +123,8 @@ const ImportacaoXML = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
     const [existingClient, setExistingClient] = useState<Client | null>(null);
+    const [conflictPieces, setConflictPieces] = useState<string[]>([]);
+    const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
 
     const fetchProjectsAndClients = useCallback(async () => {
         if (!user) return;
@@ -167,6 +171,7 @@ const ImportacaoXML = () => {
         setXmlHeader(null);
         setSelectedProjectId(null);
         setError('');
+        setConflictPieces([]);
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -292,10 +297,62 @@ const ImportacaoXML = () => {
         }
     };
 
+    const checkForConflicts = async () => {
+        if (!user || !selectedProjectId || selectedPieces.size === 0) return false;
+        
+        try {
+            // Verificar se há conflitos de peças existentes
+            const piecesToCheck = parsedPieces.filter(p => selectedPieces.has(p.name));
+            const allPieceIds: string[] = [];
+            
+            piecesToCheck.forEach(piece => {
+                allPieceIds.push(...piece.piece_ids);
+            });
+            
+            if (allPieceIds.length > 0) {
+                // Verificar quais IDs já existem
+                const { data: existingStatuses, error } = await supabase
+                    .from('piece_status')
+                    .select('piece_mark')
+                    .eq('project_id', selectedProjectId)
+                    .in('piece_mark', allPieceIds);
+                
+                if (error) {
+                    console.error('Erro ao verificar conflitos:', error);
+                    return false;
+                }
+                
+                if (existingStatuses && existingStatuses.length > 0) {
+                    setConflictPieces(existingStatuses.map(s => s.piece_mark));
+                    return true;
+                }
+            }
+            
+            return false;
+        } catch (err) {
+            console.error('Erro ao verificar conflitos:', err);
+            return false;
+        }
+    };
+
     const handleSave = async () => {
         if (!user || !selectedProjectId || selectedPieces.size === 0) return;
         
+        // Verificar conflitos antes de salvar
+        const hasConflicts = await checkForConflicts();
+        if (hasConflicts) {
+            setIsConflictModalOpen(true);
+            return;
+        }
+        
         setIsConfirmModalOpen(false);
+        performSave();
+    };
+
+    const performSave = async (overwrite: boolean = false) => {
+        if (!user || !selectedProjectId || selectedPieces.size === 0) return;
+        
+        setIsConflictModalOpen(false);
         setIsSaving(true);
 
         try {
@@ -349,7 +406,13 @@ const ImportacaoXML = () => {
                     </CardContent>
                 </Card>
 
-                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-8">{error}</div>}
+                {error && (
+                    <Alert variant="destructive" className="mb-8">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Erro</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
 
                 {xmlHeader && (
                     <div className="space-y-8 animate-fade-in">
@@ -400,6 +463,7 @@ const ImportacaoXML = () => {
                                                 <th className="p-2 text-left font-medium">Nome da Peça</th>
                                                 <th className="p-2 text-left font-medium">Tipo</th>
                                                 <th className="p-2 text-center font-medium">Qtd. Total</th>
+                                                <th className="p-2 text-left font-medium">IDs Únicos</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y">
@@ -411,6 +475,20 @@ const ImportacaoXML = () => {
                                                     <td className="p-2 font-semibold">{piece.name}</td>
                                                     <td className="p-2">{piece.group}</td>
                                                     <td className="p-2 text-center">{piece.quantity}</td>
+                                                    <td className="p-2">
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {piece.piece_ids.slice(0, 5).map((id, index) => (
+                                                                <span key={index} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
+                                                                    {id}
+                                                                </span>
+                                                            ))}
+                                                            {piece.piece_ids.length > 5 && (
+                                                                <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
+                                                                    +{piece.piece_ids.length - 5} mais
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -454,6 +532,32 @@ const ImportacaoXML = () => {
                         <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)}>Cancelar</Button>
                         <Button onClick={handleSave} disabled={isSaving}>
                             {isSaving ? 'Importando...' : 'Sim, Substituir Peças'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isConflictModalOpen} onOpenChange={setIsConflictModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Conflitos de Peças Encontrados</DialogTitle>
+                        <DialogDescription>
+                            Foram encontrados {conflictPieces.length} IDs de peças que já existem no projeto. Deseja substituir os registros existentes?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-40 overflow-y-auto border rounded p-2 my-2">
+                        <div className="flex flex-wrap gap-1">
+                            {conflictPieces.map((id, index) => (
+                                <span key={index} className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
+                                    {id}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsConflictModalOpen(false)}>Cancelar</Button>
+                        <Button variant="destructive" onClick={() => performSave(true)} disabled={isSaving}>
+                            {isSaving ? 'Substituindo...' : 'Sim, Substituir'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
