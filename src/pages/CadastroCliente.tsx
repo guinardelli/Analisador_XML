@@ -55,15 +55,13 @@ const CadastroCliente = () => {
         try {
             const { error: insertError } = await supabase
                 .from('clients')
-                .insert([
-                    {
-                        name: formData.name,
-                        email: formData.email || null,
-                        phone: formData.phone || null,
-                        address: formData.address || null,
-                        user_id: user.id
-                    }
-                ]);
+                .insert([{
+                    name: formData.name,
+                    email: formData.email || null,
+                    phone: formData.phone || null,
+                    address: formData.address || null,
+                    user_id: user.id
+                }]);
             
             if (insertError) throw insertError;
             

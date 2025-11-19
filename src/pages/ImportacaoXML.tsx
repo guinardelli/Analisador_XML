@@ -147,7 +147,7 @@ const ImportacaoXML = () => {
             
             if (clientError) {
                 console.error('Erro ao carregar clientes:', clientError);
-                toast.error('Falha ao carregar clientes.');
+                toast.error('Falha ao carregar clientes: ' + clientError.message);
             } else {
                 setClientsList(clients || []);
             }
@@ -246,7 +246,10 @@ const ImportacaoXML = () => {
             if (!clientId) {
                 const { data: newClient, error: clientError } = await supabase
                     .from('clients')
-                    .insert({ name: xmlHeader.client, user_id: user.id })
+                    .insert([{ 
+                        name: xmlHeader.client, 
+                        user_id: user.id 
+                    }])
                     .select('id')
                     .single();
                 
@@ -261,13 +264,13 @@ const ImportacaoXML = () => {
             // Create project
             const { data: newProject, error: projectError } = await supabase
                 .from('projects')
-                .insert({
+                .insert([{
                     name: xmlHeader.name,
                     project_code: xmlHeader.obra,
                     client: xmlHeader.client,
                     user_id: user.id,
                     status: 'Programar',
-                })
+                }])
                 .select('id')
                 .single();
 
