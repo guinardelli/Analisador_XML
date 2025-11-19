@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // --- TYPE DEFINITIONS ---
 interface PieceFromXml {
@@ -46,6 +47,11 @@ interface Project {
     project_code: string;
 }
 
+interface Client {
+    id: string;
+    name: string;
+}
+
 // --- HELPER FUNCTIONS ---
 const getElementTextContent = (element: Element, tagName: string): string => {
     return element.querySelector(tagName)?.textContent?.trim() || 'N/A';
@@ -58,8 +64,11 @@ const parseSafeFloat = (value: string): number => {
 
 // --- PARSING LOGIC ---
 const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: PieceFromXml[] } => {
+    // Corrigir codificação de caracteres
+    const decodedXmlString = decodeURIComponent(escape(xmlString));
+    
     const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+    const xmlDoc = parser.parseFromString(decodedXmlString, "application/xml");
     const parserError = xmlDoc.querySelector('parsererror');
     if (parserError) throw new Error('Erro ao analisar o XML. Verifique o formato do arquivo.');
     const root = xmlDoc.querySelector('DETALHAMENTOTEKLA');
@@ -122,6 +131,12 @@ const PieceRegistry = () => {
     const [xmlProjectName, setXmlProjectName] = useState<string | null>(null);
     const [showNewProjectModal, setShowNewProjectModal] = useState<boolean>(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    
+    // Estados para seleção de cliente
+    const [clientsList, setClientsList] = useState<Client[]>([]);
+    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+    const [clientNameInput, setClientNameInput] = useState<string>('');
+    const [showClientSelectionModal, setShowClientSelectionModal] = useState<boolean>(false);
 
     const fetchProjects = useCallback(async () => {
         if (!user) return;
@@ -130,9 +145,17 @@ const PieceRegistry = () => {
         else setProjectsList(data || []);
     }, [user]);
 
+    const fetchClients = useCallback(async () => {
+        if (!user) return;
+        const { data, error } = await supabase.from('clients').select('id, name').eq('user_id', user.id).order('name');
+        if (error) toast.error('Falha ao carregar a lista de clientes.');
+        else setClientsList(data || []);
+    }, [user]);
+
     useEffect(() => {
         fetchProjects();
-    }, [fetchProjects]);
+        fetchClients();
+    }, [fetchProjects, fetchClients]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files ? Array.from(event.target.files) : [];
@@ -211,6 +234,16 @@ const PieceRegistry = () => {
             toast.error("Selecione um projeto e ao menos uma peça.");
             return;
         }
+        setShowClientSelectionModal(true);
+    };
+
+    const handleConfirmClientAndSave = async () => {
+        if (!selectedClientId && !clientNameInput.trim()) {
+            toast.error("Por favor, selecione um cliente ou informe o nome do cliente.");
+            return;
+        }
+        
+        setShowClientSelectionModal(false);
         setIsConfirmModalOpen(true);
     };
 
@@ -223,6 +256,15 @@ const PieceRegistry = () => {
         setIsConfirmModalOpen(false);
         setIsSavingToDb(true);
         
+        // Obter o nome do cliente
+        let clientName = '';
+        if (selectedClientId) {
+            const client = clientsList.find(c => c.id === selectedClientId);
+            clientName = client ? client.name : '';
+        } else {
+            clientName = clientNameInput.trim();
+        }
+
         const piecesToInsert = parsedPieces
             .filter(p => selectedPieces.has(p.name))
             .map(p => ({
@@ -257,9 +299,13 @@ const PieceRegistry = () => {
                 return acc + (piece.quantity * piece.unit_volume);
             }, 0);
 
+            // Atualizar o projeto com o cliente selecionado
             const { error: updateError } = await supabase
                 .from('projects')
-                .update({ total_volume: newTotalVolume })
+                .update({ 
+                    total_volume: newTotalVolume,
+                    client: clientName
+                })
                 .eq('id', selectedProjectId);
             
             if (updateError) {
@@ -270,22 +316,32 @@ const PieceRegistry = () => {
         toast.success('Peças adicionadas com sucesso ao projeto!');
         navigate(`/projetos/${selectedProjectId}`);
         setIsSavingToDb(false);
-    }, [user, parsedPieces, selectedPieces, navigate, selectedProjectId]);
+    }, [user, parsedPieces, selectedPieces, navigate, selectedProjectId, selectedClientId, clientNameInput, clientsList]);
 
     const handleCreateNewProject = useCallback(async () => {
         if (!user || !xmlProjectCode || !xmlProjectName) return;
         setIsSavingToDb(true);
 
+        // Obter o nome do cliente
+        let clientName = '';
+        if (selectedClientId) {
+            const client = clientsList.find(c => c.id === selectedClientId);
+            clientName = client ? client.name : '';
+        } else {
+            clientName = clientNameInput.trim();
+        }
+
         const { data, error } = await supabase.from('projects').insert({
             name: xmlProjectName,
             project_code: xmlProjectCode,
             user_id: user.id,
-            client: xmlHeader?.projetista || 'N/A',
+            client: clientName,
             status: 'Programar',
         }).select('id, name, project_code').single();
 
         setIsSavingToDb(false);
         setShowNewProjectModal(false);
+        setShowClientSelectionModal(false);
 
         if (error || !data) {
             toast.error(`Erro ao criar projeto: ${error?.message}`);
@@ -297,7 +353,7 @@ const PieceRegistry = () => {
         await fetchProjects();
         setSelectedProjectId(data.id);
 
-    }, [user, xmlProjectCode, xmlProjectName, xmlHeader, fetchProjects]);
+    }, [user, xmlProjectCode, xmlProjectName, fetchProjects, selectedClientId, clientNameInput, clientsList]);
 
     const handleTogglePieceSelection = (pieceName: string) => {
         setSelectedPieces(prev => {
@@ -341,7 +397,9 @@ const PieceRegistry = () => {
                     </CardContent>
                 </Card>
 
-                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-8">{error}</div>}
+                {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl mb-8">{error}</div>
+
+}
 
                 {xmlHeader && (
                     <div className="space-y-8 animate-fade-in">
@@ -431,7 +489,68 @@ const PieceRegistry = () => {
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowNewProjectModal(false)}>Cancelar</Button>
-                        <Button onClick={handleCreateNewProject} disabled={isSavingToDb}>{isSavingToDb ? 'Criando...' : 'Sim, Criar Projeto'}</Button>
+                        <Button onClick={() => setShowClientSelectionModal(true)} disabled={isSavingToDb}>
+                            {isSavingToDb ? 'Criando...' : 'Sim, Criar Projeto'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showClientSelectionModal} onOpenChange={setShowClientSelectionModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Selecionar Cliente</DialogTitle>
+                        <DialogDescription>Selecione um cliente existente ou informe o nome do cliente para o projeto.</DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="client-select">Cliente Existente</Label>
+                            <Select onValueChange={(value) => {
+                                setSelectedClientId(value);
+                                setClientNameInput('');
+                            }}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione um cliente" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {clientsList.map(client => (
+                                        <SelectItem key={client.id} value={client.id}>
+                                            {client.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-border-default"></div>
+                            </div>
+                            <div className="relative flex justify-center text-xs uppercase">
+                                <span className="bg-background px-2 text-text-secondary">ou</span>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="client-name">Nome do Cliente</Label>
+                            <Input
+                                id="client-name"
+                                value={clientNameInput}
+                                onChange={(e) => {
+                                    setClientNameInput(e.target.value);
+                                    setSelectedClientId(null);
+                                }}
+                                placeholder="Digite o nome do cliente"
+                                disabled={!!selectedClientId}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowClientSelectionModal(false)}>Cancelar</Button>
+                        <Button 
+                            onClick={selectedProjectId ? handleConfirmClientAndSave : handleCreateNewProject}
+                            disabled={isSavingToDb || (!selectedClientId && !clientNameInput.trim())}
+                        >
+                            {isSavingToDb ? 'Processando...' : (selectedProjectId ? 'Continuar' : 'Criar Projeto')}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
