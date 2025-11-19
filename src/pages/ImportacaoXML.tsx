@@ -43,6 +43,11 @@ interface Client {
     name: string;
 }
 
+interface PieceStatus {
+    piece_mark: string;
+    piece_name: string;
+}
+
 // --- HELPER FUNCTIONS ---
 const getElementTextContent = (element: Element, tagName: string): string => {
     return element.querySelector(tagName)?.textContent?.trim() || '';
@@ -123,7 +128,7 @@ const ImportacaoXML = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
     const [existingClient, setExistingClient] = useState<Client | null>(null);
-    const [conflictPieces, setConflictPieces] = useState<string[]>([]);
+    const [conflictPieces, setConflictPieces] = useState<{id: string, oldName: string, newName: string}[]>([]);
     const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
 
     const fetchProjectsAndClients = useCallback(async () => {
@@ -310,10 +315,10 @@ const ImportacaoXML = () => {
             });
             
             if (allPieceIds.length > 0) {
-                // Verificar quais IDs já existem
+                // Verificar quais IDs já existem e se há mudança de nome
                 const { data: existingStatuses, error } = await supabase
                     .from('piece_status')
-                    .select('piece_mark')
+                    .select('piece_mark, piece_name')
                     .eq('project_id', selectedProjectId)
                     .in('piece_mark', allPieceIds);
                 
@@ -323,8 +328,26 @@ const ImportacaoXML = () => {
                 }
                 
                 if (existingStatuses && existingStatuses.length > 0) {
-                    setConflictPieces(existingStatuses.map(s => s.piece_mark));
-                    return true;
+                    // Verificar se há mudança de nome para os IDs existentes
+                    const conflicts: {id: string, oldName: string, newName: string}[] = [];
+                    
+                    piecesToCheck.forEach(piece => {
+                        piece.piece_ids.forEach(id => {
+                            const existing = existingStatuses.find(s => s.piece_mark === id);
+                            if (existing && existing.piece_name !== piece.name) {
+                                conflicts.push({
+                                    id,
+                                    oldName: existing.piece_name,
+                                    newName: piece.name
+                                });
+                            }
+                        });
+                    });
+                    
+                    if (conflicts.length > 0) {
+                        setConflictPieces(conflicts);
+                        return true;
+                    }
                 }
             }
             
@@ -525,13 +548,13 @@ const ImportacaoXML = () => {
                     <DialogHeader>
                         <DialogTitle>Confirmar Importação</DialogTitle>
                         <DialogDescription>
-                            Esta ação substituirá TODAS as peças existentes no projeto "{projectsList.find(p=>p.id === selectedProjectId)?.name}" pelas {selectedPieces.size} novas peças do arquivo. Esta ação não pode ser desfeita. Deseja continuar?
+                            Deseja importar as peças deste arquivo?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)}>Cancelar</Button>
                         <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? 'Importando...' : 'Sim, Substituir Peças'}
+                            {isSaving ? 'Importando...' : 'Confirmar'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -540,24 +563,38 @@ const ImportacaoXML = () => {
             <Dialog open={isConflictModalOpen} onOpenChange={setIsConflictModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Conflitos de Peças Encontrados</DialogTitle>
+                        <DialogTitle>Atenção: Reatribuição de IDs</DialogTitle>
                         <DialogDescription>
-                            Foram encontrados {conflictPieces.length} IDs de peças que já existem no projeto. Deseja substituir os registros existentes?
+                            Foram encontrados IDs que estão sendo reatribuídos a peças com nomes diferentes:
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="max-h-40 overflow-y-auto border rounded p-2 my-2">
-                        <div className="flex flex-wrap gap-1">
-                            {conflictPieces.map((id, index) => (
-                                <span key={index} className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
-                                    {id}
-                                </span>
-                            ))}
-                        </div>
+                    <div className="max-h-60 overflow-y-auto border rounded p-3 my-2">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b">
+                                    <th className="text-left p-2">ID</th>
+                                    <th className="text-left p-2">Nome Antigo</th>
+                                    <th className="text-left p-2">Novo Nome</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {conflictPieces.map((conflict, index) => (
+                                    <tr key={index} className="border-b">
+                                        <td className="p-2 font-mono text-xs">{conflict.id.substring(0, 8)}...</td>
+                                        <td className="p-2">{conflict.oldName}</td>
+                                        <td className="p-2">{conflict.newName}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                    <DialogFooter>
+                    <DialogDescription className="mt-2">
+                        Deseja confirmar estas alterações?
+                    </DialogDescription>
+                    <DialogFooter className="mt-4">
                         <Button variant="outline" onClick={() => setIsConflictModalOpen(false)}>Cancelar</Button>
-                        <Button variant="destructive" onClick={() => performSave(true)} disabled={isSaving}>
-                            {isSaving ? 'Substituindo...' : 'Sim, Substituir'}
+                        <Button onClick={() => performSave(true)} disabled={isSaving}>
+                            {isSaving ? 'Processando...' : 'Confirmar'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
