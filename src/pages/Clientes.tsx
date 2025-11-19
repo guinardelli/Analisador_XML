@@ -11,8 +11,20 @@ import {
   Plus, 
   Search, 
   Calendar,
-  MapPin
+  MapPin,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Client {
   id: string;
@@ -41,6 +53,9 @@ const Clientes = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [expandedClient, setExpandedClient] = useState<string | null>(null);
+    const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
 
     useEffect(() => {
         fetchClients();
@@ -101,6 +116,51 @@ const Clientes = () => {
             if (!projects[clientId]) {
                 await fetchClientProjects(clientId);
             }
+        }
+    };
+
+    const handleDeleteClient = (client: Client) => {
+        setClientToDelete(client);
+        setDeleteConfirmationInput('');
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDeleteClient = async () => {
+        if (!clientToDelete || deleteConfirmationInput !== clientToDelete.name) {
+            return;
+        }
+
+        try {
+            // Verificar se o cliente tem projetos associados
+            const { data: projectsData, error: projectsError } = await supabase
+                .from('projects')
+                .select('id')
+                .eq('user_id', user?.id)
+                .eq('client', clientToDelete.name);
+
+            if (projectsError) throw projectsError;
+
+            if (projectsData && projectsData.length > 0) {
+                // Se tiver projetos, não permitir exclusão
+                alert('Não é possível excluir um cliente que possui projetos associados. Exclua os projetos primeiro.');
+                return;
+            }
+
+            // Excluir o cliente
+            const { error } = await supabase
+                .from('clients')
+                .delete()
+                .eq('id', clientToDelete.id);
+
+            if (error) throw error;
+
+            // Atualizar a lista de clientes
+            setClients(clients.filter(c => c.id !== clientToDelete.id));
+            setIsDeleteDialogOpen(false);
+            setClientToDelete(null);
+        } catch (error) {
+            console.error('Erro ao excluir cliente:', error);
+            alert('Erro ao excluir cliente. Por favor, tente novamente.');
         }
     };
 
@@ -212,14 +272,32 @@ const Clientes = () => {
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="flex items-center">
+                                        <div className="flex items-center gap-2">
                                             {projects[client.id] && (
                                                 <span className="text-sm text-text-subtle mr-4">
                                                     {projects[client.id].length} projeto(s)
                                                 </span>
                                             )}
-                                            <Button variant="outline" size="sm">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                className="mr-2"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleClientDetails(client.id);
+                                                }}
+                                            >
                                                 {expandedClient === client.id ? 'Ocultar' : 'Ver'} Projetos
+                                            </Button>
+                                            <Button 
+                                                variant="destructive" 
+                                                size="sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteClient(client);
+                                                }}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </div>
@@ -296,6 +374,45 @@ const Clientes = () => {
                     </div>
                 )}
             </div>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            <div className="flex items-start gap-3">
+                                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <p>Tem certeza que deseja excluir o cliente <strong>{clientToDelete?.name}</strong>?</p>
+                                    <p className="mt-2 text-sm text-text-secondary">
+                                        Esta ação não pode ser desfeita. Todos os dados associados ao cliente serão permanentemente excluídos.
+                                    </p>
+                                    <p className="mt-3 text-sm font-medium">
+                                        Para confirmar, digite o nome do cliente: <strong>{clientToDelete?.name}</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="py-4">
+                        <Input
+                            value={deleteConfirmationInput}
+                            onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                            placeholder="Digite o nome do cliente para confirmar"
+                        />
+                    </div>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={confirmDeleteClient}
+                            disabled={deleteConfirmationInput !== clientToDelete?.name}
+                            className="bg-red-600 hover:bg-red-700"
+                        >
+                            Excluir Cliente
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
