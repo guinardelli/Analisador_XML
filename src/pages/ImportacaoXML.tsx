@@ -53,7 +53,14 @@ const parseSafeFloat = (value: string): number => {
 
 // --- PARSING LOGIC ---
 const parseSingleXml = (xmlString: string): { header: XmlHeader; pieces: PieceFromXml[] } => {
-    const decodedXmlString = decodeURIComponent(escape(xmlString));
+    // Tentar decodificar o XML primeiro, se falhar usar o string original
+    let decodedXmlString = xmlString;
+    try {
+        decodedXmlString = decodeURIComponent(escape(xmlString));
+    } catch (e) {
+        // Se falhar, usar o string original
+        console.warn('Falha ao decodificar XML, usando string original');
+    }
     
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(decodedXmlString, "application/xml");
@@ -117,13 +124,37 @@ const ImportacaoXML = () => {
 
     const fetchProjectsAndClients = useCallback(async () => {
         if (!user) return;
-        const { data: projects, error: projError } = await supabase.from('projects').select('id, name, project_code, client').eq('user_id', user.id);
-        if (projError) toast.error('Falha ao carregar projetos.');
-        else setProjectsList(projects || []);
+        
+        try {
+            // Buscar projetos
+            const { data: projects, error: projError } = await supabase
+                .from('projects')
+                .select('id, name, project_code, client')
+                .eq('user_id', user.id);
+            
+            if (projError) {
+                console.error('Erro ao carregar projetos:', projError);
+                toast.error('Falha ao carregar projetos.');
+            } else {
+                setProjectsList(projects || []);
+            }
 
-        const { data: clients, error: clientError } = await supabase.from('clients').select('id, name').eq('user_id', user.id);
-        if (clientError) toast.error('Falha ao carregar clientes.');
-        else setClientsList(clients || []);
+            // Buscar clientes
+            const { data: clients, error: clientError } = await supabase
+                .from('clients')
+                .select('id, name')
+                .eq('user_id', user.id);
+            
+            if (clientError) {
+                console.error('Erro ao carregar clientes:', clientError);
+                toast.error('Falha ao carregar clientes.');
+            } else {
+                setClientsList(clients || []);
+            }
+        } catch (err) {
+            console.error('Erro inesperado ao carregar dados:', err);
+            toast.error('Erro ao carregar dados do sistema.');
+        }
     }, [user]);
 
     useEffect(() => {
@@ -151,7 +182,22 @@ const ImportacaoXML = () => {
         resetState();
 
         try {
-            const fileReadPromises = selectedFiles.map(file => file.text());
+            const fileReadPromises = selectedFiles.map(file => {
+                return new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target?.result as string;
+                        if (content) {
+                            resolve(content);
+                        } else {
+                            reject(new Error('Falha ao ler o arquivo'));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('Erro ao ler o arquivo'));
+                    reader.readAsText(file, 'ISO-8859-1'); // Especificar encoding
+                });
+            });
+
             const xmlStrings = await Promise.all(fileReadPromises);
 
             let combinedHeader: XmlHeader | null = null;
@@ -183,6 +229,7 @@ const ImportacaoXML = () => {
             }
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Ocorreu um erro desconhecido.');
+            console.error('Erro ao processar arquivos:', e);
         } finally {
             setIsLoading(false);
         }
@@ -192,48 +239,54 @@ const ImportacaoXML = () => {
         if (!user || !xmlHeader) return;
         setIsSaving(true);
 
-        let clientId = existingClient?.id;
+        try {
+            let clientId = existingClient?.id;
 
-        // Create client if it doesn't exist
-        if (!clientId) {
-            const { data: newClient, error: clientError } = await supabase
-                .from('clients')
-                .insert({ name: xmlHeader.client, user_id: user.id })
+            // Create client if it doesn't exist
+            if (!clientId) {
+                const { data: newClient, error: clientError } = await supabase
+                    .from('clients')
+                    .insert({ name: xmlHeader.client, user_id: user.id })
+                    .select('id')
+                    .single();
+                
+                if (clientError) {
+                    toast.error(`Erro ao criar novo cliente: ${clientError.message}`);
+                    setIsSaving(false);
+                    return;
+                }
+                clientId = newClient?.id;
+            }
+
+            // Create project
+            const { data: newProject, error: projectError } = await supabase
+                .from('projects')
+                .insert({
+                    name: xmlHeader.name,
+                    project_code: xmlHeader.obra,
+                    client: xmlHeader.client,
+                    user_id: user.id,
+                    status: 'Programar',
+                })
                 .select('id')
                 .single();
-            
-            if (clientError) {
-                toast.error(`Erro ao criar novo cliente: ${clientError.message}`);
+
+            if (projectError) {
+                toast.error(`Erro ao criar projeto: ${projectError.message}`);
                 setIsSaving(false);
                 return;
             }
-            clientId = newClient.id;
-        }
 
-        // Create project
-        const { data: newProject, error: projectError } = await supabase
-            .from('projects')
-            .insert({
-                name: xmlHeader.name,
-                project_code: xmlHeader.obra,
-                client: xmlHeader.client,
-                user_id: user.id,
-                status: 'Programar',
-            })
-            .select('id')
-            .single();
-
-        if (projectError) {
-            toast.error(`Erro ao criar projeto: ${projectError.message}`);
+            toast.success(`Projeto "${xmlHeader.name}" criado com sucesso!`);
+            await fetchProjectsAndClients();
+            setSelectedProjectId(newProject?.id || null);
+            setIsNewProjectModalOpen(false);
+        } catch (err) {
+            console.error('Erro inesperado ao criar projeto:', err);
+            toast.error('Erro inesperado ao criar projeto.');
+        } finally {
             setIsSaving(false);
-            return;
         }
-
-        toast.success(`Projeto "${xmlHeader.name}" criado com sucesso!`);
-        await fetchProjectsAndClients();
-        setSelectedProjectId(newProject.id);
-        setIsNewProjectModalOpen(false);
-        setIsSaving(false);
     };
 
     const handleSave = async () => {
@@ -242,21 +295,27 @@ const ImportacaoXML = () => {
         setIsConfirmModalOpen(false);
         setIsSaving(true);
 
-        const piecesToInsert = parsedPieces.filter(p => selectedPieces.has(p.name));
+        try {
+            const piecesToInsert = parsedPieces.filter(p => selectedPieces.has(p.name));
 
-        const { error } = await supabase.rpc('replace_project_pieces', {
-            p_project_id: selectedProjectId,
-            p_user_id: user.id,
-            p_pieces: piecesToInsert,
-        });
+            const { error } = await supabase.rpc('replace_project_pieces', {
+                p_project_id: selectedProjectId,
+                p_user_id: user.id,
+                p_pieces: piecesToInsert,
+            });
 
-        if (error) {
-            toast.error(`Erro ao importar peças: ${error.message}`);
-        } else {
-            toast.success('Peças importadas com sucesso para o projeto!');
-            navigate(`/projetos/${selectedProjectId}`);
+            if (error) {
+                toast.error(`Erro ao importar peças: ${error.message}`);
+            } else {
+                toast.success('Peças importadas com sucesso para o projeto!');
+                navigate(`/projetos/${selectedProjectId}`);
+            }
+        } catch (err) {
+            console.error('Erro inesperado ao salvar:', err);
+            toast.error('Erro inesperado ao salvar peças.');
+        } finally {
+            setIsSaving(false);
         }
-        setIsSaving(false);
     };
 
     const handleToggleSelectAll = () => {
