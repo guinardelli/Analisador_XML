@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // --- TYPE DEFINITIONS ---
 interface PieceFromXml {
@@ -505,21 +504,22 @@ const PieceRegistry = () => {
                     <div className="py-4 space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="client-select">Cliente Existente</Label>
-                            <Select onValueChange={(value) => {
-                                setSelectedClientId(value);
-                                setClientNameInput('');
-                            }}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione um cliente" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {clientsList.map(client => (
-                                        <SelectItem key={client.id} value={client.id}>
-                                            {client.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <select 
+                                id="client-select"
+                                className="w-full bg-surface border border-border-default rounded-md p-2 text-sm"
+                                value={selectedClientId || ''}
+                                onChange={(e) => {
+                                    setSelectedClientId(e.target.value || null);
+                                    setClientNameInput('');
+                                }}
+                            >
+                                <option value="">Selecione um cliente</option>
+                                {clientsList.map(client => (
+                                    <option key={client.id} value={client.id}>
+                                        {client.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
