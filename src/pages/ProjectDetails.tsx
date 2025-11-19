@@ -21,7 +21,7 @@ import {
   LineElement,
   Filler,
 } from 'chart.js';
-import { Doughnut, Line, Bar } from 'react-chartjs-2';
+import { Doughnut, Bar } from 'react-chartjs-2';
 
 // Registrar componentes do Chart.js
 ChartJS.register(
@@ -75,7 +75,6 @@ const ProjectDetails = () => {
 
     // State for chart data
     const [progressChartData, setProgressChartData] = useState<any>(null);
-    const [progressOverTimeData, setProgressOverTimeData] = useState<any>(null);
     const [weightByGroupData, setWeightByGroupData] = useState<any>(null);
 
     const fetchProjectData = useCallback(async () => {
@@ -173,33 +172,7 @@ const ProjectDetails = () => {
             }]
         });
 
-        // 2. Progress Over Time Line Chart
-        const releasesByDate: { [key: string]: number } = {};
-        releasedPieces.forEach(p => {
-            if (p.released_at) {
-                const date = new Date(p.released_at).toISOString().split('T')[0];
-                releasesByDate[date] = (releasesByDate[date] || 0) + 1;
-            }
-        });
-        const sortedDates = Object.keys(releasesByDate).sort();
-        let cumulativeCount = 0;
-        const cumulativeData = sortedDates.map(date => {
-            cumulativeCount += releasesByDate[date];
-            return cumulativeCount;
-        });
-        setProgressOverTimeData({
-            labels: sortedDates.map(d => new Date(d).toLocaleDateString('pt-BR')),
-            datasets: [{
-                label: 'Peças Liberadas (Acumulado)',
-                data: cumulativeData,
-                fill: true,
-                borderColor: '#3B82F6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.1
-            }]
-        });
-
-        // 3. Weight by Group Bar Chart
+        // 2. Weight by Group Bar Chart
         const sortedWeightByGroup = Object.entries(weightByGroup).sort(([,a], [,b]) => b - a);
         setWeightByGroupData({
             labels: sortedWeightByGroup.map(([group]) => group),
@@ -365,15 +338,6 @@ const ProjectDetails = () => {
                         </CardHeader>
                         <CardContent className="h-64">
                             {weightByGroupData && <Bar data={weightByGroupData} options={chartOptions} />}
-                        </CardContent>
-                    </Card>
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle>Progresso ao Longo do Tempo</CardTitle>
-                            <CardDescription>Acompanhe a evolução da liberação de peças.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="h-64">
-                            {progressOverTimeData && <Line data={progressOverTimeData} options={chartOptions} />}
                         </CardContent>
                     </Card>
                 </div>
