@@ -23,9 +23,23 @@ const Login = () => {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-background p-4">
-      <div className="w-full max-w-md bg-transparent p-8 rounded-xl shadow-none border-none">
-        <h1 className="text-2xl font-bold text-center text-text-primary mb-6">Acesso ao Sistema</h1>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-amber-50 p-4"
+         style={{ 
+           backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23fde68a" fill-opacity="0.2"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
+         }}>
+      <div className="w-full max-w-md bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/20">
+        <div className="text-center mb-8">
+          <div className="mx-auto bg-primary w-16 h-16 rounded-full flex items-center justify-center mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 3v18h18" />
+              <path d="M18 17V9" />
+              <path d="M13 17V5" />
+              <path d="M8 17v-3" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-text-primary">Tekla x Plannix</h1>
+          <p className="text-text-secondary mt-2">Acesso ao Sistema</p>
+        </div>
         <Auth
           supabaseClient={supabase}
           providers={[]}
@@ -44,6 +58,12 @@ const Login = () => {
                 },
               },
             },
+            className: {
+              button: 'rounded-lg',
+              input: 'rounded-lg',
+              label: 'text-text-secondary',
+              anchor: 'text-primary hover:text-primary-hover'
+            }
           }}
           theme="light"
           localization={{
