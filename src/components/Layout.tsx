@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, Boxes, FolderPlus, LayoutGrid, FileText, LogOut } from 'lucide-react';
+import { Home, Boxes, FolderPlus, LayoutGrid, FileText, LogOut, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from './ui/button';
 
@@ -39,6 +39,10 @@ const Sidebar = () => {
                 <NavLink to="/projetos" className={navLinkClasses}>
                     <LayoutGrid className="w-5 h-5 mr-3" />
                     Projetos
+                </NavLink>
+                <NavLink to="/clientes" className={navLinkClasses}>
+                    <Users className="w-5 h-5 mr-3" />
+                    Clientes
                 </NavLink>
                 <NavLink to="/relatorios" className={navLinkClasses}>
                     <FileText className="w-5 h-5 mr-3" />
