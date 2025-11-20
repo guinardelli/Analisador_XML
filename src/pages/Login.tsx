@@ -37,7 +37,7 @@ const Login = () => {
               <path d="M8 17v-3" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-text-primary">Tekla x Plannix</h1>
+          <h1 className="text-2xl font-bold text-text-primary uppercase">Tekla x Plannix</h1>
           <p className="text-text-secondary mt-2">Acesso ao Sistema</p>
         </div>
         <Auth
