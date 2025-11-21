@@ -121,20 +121,32 @@ const ProjectDetails = () => {
         return groupedPieces.filter(group => displayedGroupNames.has(group.name));
     }, [groupedPieces, displayedPieces]);
 
-    // Dados para os filtros dependentes
+    // Dados para os filtros dependentes - lógica corrigida para filtros interdependentes
     const availableOptions = useMemo(() => {
-        // Primeiro, filtramos as peças com base nos filtros atuais (exceto seção)
-        const filteredPieces = allIndividualPieces.filter(piece => {
-            const nameMatch = filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
-            const groupMatch = filters.group.length > 0 ? filters.group.includes(piece.group) : true;
-            const concreteClassMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
-            return nameMatch && groupMatch && concreteClassMatch;
-        });
+        // Primeiro, filtra as peças com base nos filtros atuais, exceto o filtro que estamos calculando
+        const filteredByName = allIndividualPieces.filter(piece => 
+            filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true
+        );
 
-        // Obtemos as opções únicas com base nas peças filtradas
-        const uniqueGroups = [...new Set(allIndividualPieces.map(p => p.group))].sort();
-        const uniqueSections = [...new Set(filteredPieces.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
-        const uniqueConcreteClasses = [...new Set(allIndividualPieces.map(p => p.concrete_class))].sort();
+        // Para grupos: filtra por nome e concreto, mas não por grupo ou seção
+        const groupsFiltered = filteredByName.filter(piece => 
+            filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true
+        );
+        const uniqueGroups = [...new Set(groupsFiltered.map(p => p.group))].sort();
+
+        // Para seções: filtra por nome, grupo e concreto
+        const sectionsFiltered = filteredByName.filter(piece => 
+            filters.group.length > 0 ? filters.group.includes(piece.group) : true &&
+            filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true
+        );
+        const uniqueSections = [...new Set(sectionsFiltered.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+
+        // Para concreto: filtra por nome, grupo e seção
+        const concreteFiltered = filteredByName.filter(piece => 
+            filters.group.length > 0 ? filters.group.includes(piece.group) : true &&
+            filters.section.length > 0 ? filters.section.includes(piece.section) : true
+        );
+        const uniqueConcreteClasses = [...new Set(concreteFiltered.map(p => p.concrete_class))].sort();
         
         return { groups: uniqueGroups, sections: uniqueSections, concreteClasses: uniqueConcreteClasses };
     }, [allIndividualPieces, filters]);
@@ -218,12 +230,6 @@ const ProjectDetails = () => {
     const handleFilterChange = (field: keyof Filters, value: string | string[]) => {
         setFilters(prev => {
             const newFilters = { ...prev, [field]: value };
-            
-            // Se o filtro de grupo mudar, resetamos o filtro de seção
-            if (field === 'group') {
-                newFilters.section = [];
-            }
-            
             return newFilters;
         });
     };
@@ -236,11 +242,6 @@ const ProjectDetails = () => {
                 : [...currentValues, value];
             
             const newFilters = { ...prev, [field]: newValues };
-            
-            // Se o filtro de grupo mudar, resetamos o filtro de seção
-            if (field === 'group') {
-                newFilters.section = [];
-            }
             
             return newFilters;
         });
@@ -357,7 +358,6 @@ const ProjectDetails = () => {
                                                             checked={filters.section.includes(section)}
                                                             onChange={e => handleCheckboxChange('section', section)}
                                                             className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                                            disabled={filters.group.length > 0 && filters.section.length === 0}
                                                         />
                                                         <span>{section}</span>
                                                     </label>
