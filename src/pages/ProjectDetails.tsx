@@ -34,9 +34,12 @@ interface IndividualPiece {
     id: string; name: string; group: string; section: string; length: number; weight: number; unit_volume: number; concrete_class: string; is_released: boolean;
 }
 interface Filters {
-    name: string; group: string; section: string; concrete_class: string[];
+    name: string; 
+    group: string[]; 
+    section: string[]; 
+    concrete_class: string[];
 }
-const initialFilters: Filters = { name: '', group: '', section: '', concrete_class: [] };
+const initialFilters: Filters = { name: '', group: [], section: [], concrete_class: [] };
 
 const ProjectDetails = () => {
     const { projectId } = useParams<{ projectId: string }>();
@@ -106,8 +109,8 @@ const ProjectDetails = () => {
     const displayedPieces = useMemo(() => {
         return allIndividualPieces.filter(piece => {
             const nameMatch = filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
-            const groupMatch = filters.group ? piece.group === filters.group : true;
-            const sectionMatch = filters.section ? piece.section === filters.section : true;
+            const groupMatch = filters.group.length > 0 ? filters.group.includes(piece.group) : true;
+            const sectionMatch = filters.section.length > 0 ? filters.section.includes(piece.section) : true;
             const concreteClassMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
             return nameMatch && groupMatch && sectionMatch && concreteClassMatch;
         });
@@ -123,7 +126,7 @@ const ProjectDetails = () => {
         // Primeiro, filtramos as peças com base nos filtros atuais (exceto seção)
         const filteredPieces = allIndividualPieces.filter(piece => {
             const nameMatch = filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
-            const groupMatch = filters.group ? piece.group === filters.group : true;
+            const groupMatch = filters.group.length > 0 ? filters.group.includes(piece.group) : true;
             const concreteClassMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
             return nameMatch && groupMatch && concreteClassMatch;
         });
@@ -218,11 +221,33 @@ const ProjectDetails = () => {
             
             // Se o filtro de grupo mudar, resetamos o filtro de seção
             if (field === 'group') {
-                newFilters.section = '';
+                newFilters.section = [];
             }
             
             return newFilters;
         });
+    };
+
+    const handleCheckboxChange = (field: keyof Filters, value: string) => {
+        setFilters(prev => {
+            const currentValues = [...prev[field]] as string[];
+            const newValues = currentValues.includes(value) 
+                ? currentValues.filter(v => v !== value) 
+                : [...currentValues, value];
+            
+            const newFilters = { ...prev, [field]: newValues };
+            
+            // Se o filtro de grupo mudar, resetamos o filtro de seção
+            if (field === 'group') {
+                newFilters.section = [];
+            }
+            
+            return newFilters;
+        });
+    };
+
+    const handleClearFilters = () => {
+        setFilters(initialFilters);
     };
 
     // --- RENDER LOGIC ---
@@ -281,74 +306,83 @@ const ProjectDetails = () => {
 
                     <TabsContent value="pieces">
                         <Card className="mt-6">
-                            <CardHeader><CardTitle>Filtros</CardTitle></CardHeader><CardContent>
+                            <CardHeader>
+                                <div className="flex justify-between items-center">
+                                    <CardTitle>Filtros</CardTitle>
+                                    <Button variant="outline" onClick={handleClearFilters}>
+                                        Limpar Filtros
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
                                 <div className="space-y-4">
-                                    <Input 
-                                        type="text" 
-                                        value={filters.name} 
-                                        onChange={e => handleFilterChange('name', e.target.value)} 
-                                        placeholder="Buscar por nome..." 
-                                    />
+                                    <div>
+                                        <Label>Nome da Peça</Label>
+                                        <Input 
+                                            type="text" 
+                                            value={filters.name} 
+                                            onChange={e => handleFilterChange('name', e.target.value)} 
+                                            placeholder="Buscar por nome..." 
+                                        />
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
-                                            <Label className="block mb-1">Tipo</Label>
-                                            <select
-                                                value={filters.group}
-                                                onChange={e => handleFilterChange('group', e.target.value)}
-                                                className="w-full bg-surface border border-border-default rounded-md p-2 text-sm"
-                                            >
-                                                <option value="">Todos os tipos</option>
+                                            <Label className="block mb-1">
+                                                Tipo {filters.group.length > 0 && `(${filters.group.length})`}
+                                            </Label>
+                                            <div className="h-40 overflow-y-auto p-2 border rounded-lg space-y-1">
                                                 {availableOptions.groups.map(group => (
-                                                    <option key={group} value={group}>{group}</option>
+                                                    <label key={group} className="flex items-center space-x-2 text-sm cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filters.group.includes(group)}
+                                                            onChange={e => handleCheckboxChange('group', group)}
+                                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                        />
+                                                        <span>{group}</span>
+                                                    </label>
                                                 ))}
-                                            </select>
+                                            </div>
                                         </div>
                                         
                                         <div>
-                                            <Label className="block mb-1">Seção</Label>
-                                            <select
-                                                value={filters.section}
-                                                onChange={e => handleFilterChange('section', e.target.value)}
-                                                className="w-full bg-surface border border-border-default rounded-md p-2 text-sm"
-                                                disabled={!filters.group} // Desabilita se nenhum grupo estiver selecionado
-                                            >
-                                                <option value="">Todas as seções</option>
+                                            <Label className="block mb-1">
+                                                Seção {filters.section.length > 0 && `(${filters.section.length})`}
+                                            </Label>
+                                            <div className="h-40 overflow-y-auto p-2 border rounded-lg space-y-1">
                                                 {availableOptions.sections.map(section => (
-                                                    <option key={section} value={section}>{section}</option>
+                                                    <label key={section} className="flex items-center space-x-2 text-sm cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filters.section.includes(section)}
+                                                            onChange={e => handleCheckboxChange('section', section)}
+                                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                            disabled={filters.group.length > 0 && filters.section.length === 0}
+                                                        />
+                                                        <span>{section}</span>
+                                                    </label>
                                                 ))}
-                                            </select>
+                                            </div>
                                         </div>
                                         
                                         <div>
                                             <Label className="block mb-1">
                                                 Concreto {filters.concrete_class.length > 0 && `(${filters.concrete_class.length})`}
                                             </Label>
-                                            <div className="h-32 overflow-y-auto p-2 border rounded-lg space-y-1">
+                                            <div className="h-40 overflow-y-auto p-2 border rounded-lg space-y-1">
                                                 {availableOptions.concreteClasses.map(concreteClass => (
                                                     <label key={concreteClass} className="flex items-center space-x-2 text-sm cursor-pointer">
                                                         <input
                                                             type="checkbox"
                                                             checked={filters.concrete_class.includes(concreteClass)}
-                                                            onChange={e => {
-                                                                const newConcreteClasses = e.target.checked
-                                                                    ? [...filters.concrete_class, concreteClass]
-                                                                    : filters.concrete_class.filter(c => c !== concreteClass);
-                                                                handleFilterChange('concrete_class', newConcreteClasses);
-                                                            }}
+                                                            onChange={e => handleCheckboxChange('concrete_class', concreteClass)}
+                                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                                                         />
                                                         <span>{concreteClass || 'Não especificado'}</span>
                                                     </label>
                                                 ))}
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="flex justify-end">
-                                        <Button 
-                                            onClick={() => setFilters(initialFilters)} 
-                                            variant="outline"
-                                        >
-                                            Limpar Filtros
-                                        </Button>
                                     </div>
                                 </div>
                             </CardContent>

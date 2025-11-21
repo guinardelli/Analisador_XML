@@ -203,10 +203,12 @@ const Reports = () => {
         }
     };
 
-    const handleFilterCheckboxChange = (field: 'group' | 'section' | 'concrete_class', value: string) => {
+    const handleCheckboxChange = (field: keyof Filters, value: string) => {
         setFilters(prev => {
-            const currentValues = prev[field];
-            const newValues = currentValues.includes(value) ? currentValues.filter(v => v !== value) : [...currentValues, value];
+            const currentValues = [...prev[field]] as string[];
+            const newValues = currentValues.includes(value) 
+                ? currentValues.filter(v => v !== value) 
+                : [...currentValues, value];
             return {...prev, [field]: newValues};
         });
     };
@@ -328,8 +330,13 @@ const Reports = () => {
                 {rawReportData.length > 0 && (
                     <Card className="mb-8 animate-fade-in no-print">
                         <CardHeader>
-                            <CardTitle>Filtros de Peças</CardTitle>
-                            <CardDescription>Aplique filtros para refinar o relatório do projeto: {currentProjectName}.</CardDescription>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <CardTitle>Filtros de Peças</CardTitle>
+                                    <CardDescription>Aplique filtros para refinar o relatório do projeto: {currentProjectName}.</CardDescription>
+                                </div>
+                                <Button variant="outline" onClick={handleClearFilters}>Limpar Filtros</Button>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -344,27 +351,62 @@ const Reports = () => {
                                     />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {[{ id: 'group', label: 'Tipo', options: availableOptions.groups, selected: filters.group }, { id: 'section', label: 'Seção', options: availableOptions.sections, selected: filters.section }, { id: 'concrete_class', label: 'Concreto', options: availableOptions.concreteClasses, selected: filters.concrete_class }].map(filterGroup => (
-                                        <div key={filterGroup.id}>
-                                            <Label className="block text-sm font-medium text-text-secondary mb-1">{filterGroup.label} {filterGroup.selected.length > 0 && `(${filterGroup.selected.length})`}</Label>
-                                            <div className="h-32 overflow-y-auto p-2 border border-border-default rounded-lg bg-background space-y-1">
-                                                {filterGroup.options.map(opt => (
-                                                    <label key={opt} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={filterGroup.selected.includes(opt)}
-                                                            onChange={() => handleFilterCheckboxChange(filterGroup.id as 'group' | 'section' | 'concrete_class', opt)}
-                                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                                        />
-                                                        <span>{opt}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
+                                    <div>
+                                        <Label className="block text-sm font-medium text-text-secondary mb-1">
+                                            Tipo {filters.group.length > 0 && `(${filters.group.length})`}
+                                        </Label>
+                                        <div className="h-40 overflow-y-auto p-2 border border-border-default rounded-lg bg-background space-y-1">
+                                            {availableOptions.groups.map(group => (
+                                                <label key={group} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filters.group.includes(group)}
+                                                        onChange={() => handleCheckboxChange('group', group)}
+                                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                    />
+                                                    <span>{group}</span>
+                                                </label>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
-                                <div className="flex justify-end gap-3 pt-4 border-t border-border-default">
-                                    <Button variant="outline" onClick={handleClearFilters}>Limpar Filtros</Button>
+                                    </div>
+                                    
+                                    <div>
+                                        <Label className="block text-sm font-medium text-text-secondary mb-1">
+                                            Seção {filters.section.length > 0 && `(${filters.section.length})`}
+                                        </Label>
+                                        <div className="h-40 overflow-y-auto p-2 border border-border-default rounded-lg bg-background space-y-1">
+                                            {availableOptions.sections.map(section => (
+                                                <label key={section} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filters.section.includes(section)}
+                                                        onChange={() => handleCheckboxChange('section', section)}
+                                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                    />
+                                                    <span>{section}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <Label className="block text-sm font-medium text-text-secondary mb-1">
+                                            Concreto {filters.concrete_class.length > 0 && `(${filters.concrete_class.length})`}
+                                        </Label>
+                                        <div className="h-40 overflow-y-auto p-2 border border-border-default rounded-lg bg-background space-y-1">
+                                            {availableOptions.concreteClasses.map(concreteClass => (
+                                                <label key={concreteClass} className="flex items-center space-x-2 text-sm cursor-pointer text-text-secondary hover:text-text-primary">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filters.concrete_class.includes(concreteClass)}
+                                                        onChange={() => handleCheckboxChange('concrete_class', concreteClass)}
+                                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                    />
+                                                    <span>{concreteClass || 'Não especificado'}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
