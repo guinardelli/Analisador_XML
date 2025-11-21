@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
-import { ChevronDown, Trash2, Edit3 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { ChevronDown, Trash2, Edit3, Search, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ interface PiecesListProps {
   individualPieces: IndividualPiece[];
   onStatusChange: (pieceId: string, newStatus: boolean) => void;
   onDeleteGroup: (group: GroupedPiece) => void;
+  onDeleteBatch: (groupIds: string[]) => void;
 }
 
 const PiecesList: React.FC<PiecesListProps> = ({
@@ -54,10 +56,29 @@ const PiecesList: React.FC<PiecesListProps> = ({
   individualPieces,
   onStatusChange,
   onDeleteGroup,
+  onDeleteBatch,
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [groupToDelete, setGroupToDelete] = useState<GroupedPiece | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+
+  // Filtrar grupos com base no termo de busca
+  const filteredGroups = useMemo(() => {
+    if (!searchTerm.trim()) return groupedPieces;
+    
+    const lowerSearch = searchTerm.toLowerCase();
+    return groupedPieces.filter(group => {
+      // Buscar por nome do grupo
+      if (group.name.toLowerCase().includes(lowerSearch)) return true;
+      
+      // Buscar por ID das peças individuais
+      const piecesInGroup = individualPieces.filter(p => group.piece_ids?.includes(p.id));
+      return piecesInGroup.some(piece => piece.id.toLowerCase().includes(lowerSearch));
+    });
+  }, [groupedPieces, individualPieces, searchTerm]);
 
   const handleDeleteRequest = (group: GroupedPiece) => {
     setGroupToDelete(group);
@@ -70,12 +91,40 @@ const PiecesList: React.FC<PiecesListProps> = ({
     setGroupToDelete(null);
   };
 
+  const handleBatchDelete = () => {
+    if (selectedGroups.size > 0) {
+      onDeleteBatch(Array.from(selectedGroups));
+      setSelectedGroups(new Set());
+      setIsBatchDeleteOpen(false);
+    }
+  };
+
   const handleEditStatus = (groupId: string) => {
     setEditingGroupId(groupId);
   };
 
   const closeEditModal = () => {
     setEditingGroupId(null);
+  };
+
+  const toggleGroupSelection = (groupId: string) => {
+    setSelectedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId);
+      } else {
+        newSet.add(groupId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedGroups.size === filteredGroups.length) {
+      setSelectedGroups(new Set());
+    } else {
+      setSelectedGroups(new Set(filteredGroups.map(g => g.id)));
+    }
   };
 
   const formatNumber = (num: number, decimals: number = 2) =>
@@ -106,10 +155,43 @@ const PiecesList: React.FC<PiecesListProps> = ({
 
   return (
     <>
+      {/* Barra de busca e ações em lote */}
+      <div className="mb-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-text-subtle" />
+          <Input
+            placeholder="Buscar por nome ou ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
+        <div className="flex gap-2">
+          {selectedGroups.size > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setIsBatchDeleteOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir Selecionados ({selectedGroups.size})
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="overflow-x-auto rounded-lg border border-border-default shadow-sm">
         <table className="min-w-full divide-y divide-border-default">
           <thead className="sticky top-0 bg-surface shadow-sm z-10">
             <tr>
+              <th className="px-4 py-3 text-left">
+                <Checkbox
+                  checked={selectedGroups.size === filteredGroups.length && filteredGroups.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                  className="h-4 w-4"
+                />
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider min-w-[140px]">
                 Nome da Peça
               </th>
@@ -143,16 +225,24 @@ const PiecesList: React.FC<PiecesListProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-border-default bg-white">
-            {groupedPieces.map((group) => {
+            {filteredGroups.map((group) => {
               const piecesInGroup = individualPieces.filter((p) =>
                 group.piece_ids?.includes(p.id)
               );
               const total = piecesInGroup.length;
               const liberadas = piecesInGroup.filter((p) => p.is_released).length;
               const percent = total > 0 ? Math.round((liberadas / total) * 100) : 0;
+              const isSelected = selectedGroups.has(group.id);
 
               return (
-                <tr key={group.id} className="hover:bg-gray-50 even:bg-gray-50/50">
+                <tr key={group.id} className={`hover:bg-gray-50 even:bg-gray-50/50 ${isSelected ? 'bg-blue-50' : ''}`}>
+                  <td className="px-4 py-4">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleGroupSelection(group.id)}
+                      className="h-4 w-4"
+                    />
+                  </td>
                   <td className="px-4 py-4 text-sm font-semibold text-text-primary min-w-[140px]">
                     {group.name}
                   </td>
@@ -255,7 +345,7 @@ const PiecesList: React.FC<PiecesListProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Confirmação de Exclusão */}
+      {/* Dialog de Confirmação de Exclusão Individual */}
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -269,6 +359,24 @@ const PiecesList: React.FC<PiecesListProps> = ({
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Confirmação de Exclusão em Lote */}
+      <AlertDialog open={isBatchDeleteOpen} onOpenChange={setIsBatchDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão em Lote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir os <strong>{selectedGroups.size}</strong> grupos selecionados e todas as suas peças individuais? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBatchDelete} className="bg-red-600 hover:bg-red-700">
+              Excluir Selecionados
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

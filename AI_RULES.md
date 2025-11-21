@@ -331,12 +331,80 @@ refactor(components): extrai lógica de formulário para hook
 * Balancear qualidade com pragmatismo (nem sempre a solução perfeita é necessária)
 * Sinalizar quando mudanças maiores seriam benefíciais mas implementar apenas o solicitado
 
+## DYAD PRO - Uso dos Recursos da IA
+
+Os recursos do DYAD PRO devem ser usados de forma consciente para maximizar qualidade e minimizar riscos.  
+Sempre considerar esta seção ao trabalhar com IA no projeto.
+
+### Enable DYAD PRO
+
+* Sempre que possível, manter o DYAD PRO habilitado durante sessões de desenvolvimento orientado por IA
+* Ao iniciar uma nova tarefa com a IA, garantir que:
+  * Este arquivo `AI_RULES.md` seja lido e seguido
+  * A IA tenha contexto dos arquivos principais:
+    * `README.md`
+    * `package.json`
+    * Arquivo de rotas principal (`App.tsx`)
+    * Pastas: `src/pages`, `src/components`, `src/hooks`, `src/services`, `src/context`
+
+### WEB ACCESS
+
+* Usar WEB ACCESS **apenas quando**:
+  * A informação necessária não estiver no repositório (ex: documentação de biblioteca, mudanças de versão, padrões atualizados)
+  * Houver dependência de conteúdo atualizado (ex: APIs externas, docs recentes)
+* Boas práticas:
+  * Validar manualmente exemplos de código obtidos via WEB ACCESS (versão da lib, sintaxe, compatibilidade com React 19 + Vite + TS)
+  * Evitar depender de conteúdo externo para regras de negócio específicas do projeto (essas devem estar documentadas no código/README)
+  * Quando a IA usar WEB ACCESS, preferir que:
+    * Liste as principais fontes consultadas
+    * Explique como as informações externas foram aplicadas ao contexto do projeto
+
+### TURBO EDIT
+
+* Usar TURBO EDIT principalmente para:
+  * Refatorações grandes e mecânicas (ex: renomear componentes/hooks em vários arquivos)
+  * Padronização em massa (ex: atualizar imports, trocar componentes de UI, ajustar padrões de nomenclatura)
+* Fluxo obrigatório ao usar TURBO EDIT:
+  1. **Planejar**: descrever claramente o objetivo da mudança e o escopo (quais pastas/arquivos serão afetados)
+  2. **Executar** TURBO EDIT com o menor escopo possível (evitar mexer no projeto inteiro sem necessidade)
+  3. **Revisar o diff** gerado (verificar se:
+     * Tipagem TypeScript continua correta
+     * Padrões de Tailwind, shadcn/ui e estrutura de pastas foram respeitados
+  4. **Rodar lint/testes** relevantes (quando disponíveis) antes de merge
+  5. **Atualizar documentação** se a mudança alterar comportamento ou APIs internas (hooks, services, context)
+
+* Restrições:
+  * Evitar usar TURBO EDIT para “experimentar ideias”; para isso, preferir alterações locais e pequenas
+  * Não misturar múltiplas refatorações diferentes em uma única operação de TURBO EDIT
+
+### SMART CONTEXT
+
+* SMART CONTEXT deve ser usado para:
+  * Entender o contexto completo antes de alterar código existente
+  * Localizar componentes, hooks e services já existentes que podem ser reaproveitados (evitar duplicação)
+* Boas práticas:
+  * Antes de sugerir implementação, a IA deve:
+    * Ler arquivos diretamente relacionados à funcionalidade (page, componentes de feature, hooks, services)
+    * Verificar se já existe lógica semelhante em `src/hooks`, `src/services` ou `src/utils`
+  * Em pedidos de mudança, o desenvolvedor deve:
+    * Indicar qual fluxo/feature está sendo alterado (ex: “fluxo de login”, “dashboard financeiro”)
+    * Citar arquivos-chave quando souber (ex: `src/pages/Dashboard.tsx`, `src/services/authService.ts`)
+    * Pedir explicitamente para a IA **usar SMART CONTEXT para analisar arquivos relacionados antes de editar**
+* Objetivo:
+  * Garantir que as sugestões da IA respeitem:
+    * Arquitetura atual do projeto
+    * Padrões de nomenclatura
+    * Estrutura de pastas
+    * Regras deste `AI_RULES.md`
+
+
 ---
 
 ## Regras Obrigatórias
 
 * ✅ **Idioma do Aplicativo**: Português Brasileiro
 * ✅ **Capacidade da IA**: Utilizar toda capacidade disponível para chegar no melhor resultado possível
+* ✅ **Uso do DYAD PRO**: WEB ACCESS, TURBO EDIT e SMART CONTEXT DEVEM seguir as diretrizes da seção "DYAD PRO - Uso dos Recursos da IA"
 * ✅ **Mudanças Cirúrgicas**: Evitar alterar o que não foi solicitado, apenas quando estritamente necessário
 * ✅ **Verificação de Impacto**: Sempre verificar o impacto de mudanças em outras partes do aplicativo para garantir consistência
 * ✅ **Análise Completa**: Revisar código relacionado antes de implementar para entender contexto completo

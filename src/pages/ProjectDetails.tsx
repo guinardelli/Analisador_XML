@@ -217,6 +217,47 @@ const ProjectDetails = () => {
         }
     };
 
+    const handleDeleteBatch = async (groupIds: string[]) => {
+        if (!user || !projectId || groupIds.length === 0) return;
+        const toastId = toast.loading(`Excluindo ${groupIds.length} grupos...`);
+        try {
+            // Buscar todos os piece_ids dos grupos a serem excluídos
+            const { data: groupsToDelete, error: fetchError } = await supabase
+                .from('pieces')
+                .select('id, piece_ids, name')
+                .eq('project_id', projectId)
+                .in('id', groupIds);
+            
+            if (fetchError) throw fetchError;
+            
+            // Coletar todos os piece_ids
+            const allPieceIds = groupsToDelete?.flatMap(g => g.piece_ids || []) || [];
+            
+            // Excluir status das peças
+            if (allPieceIds.length > 0) {
+                const { error: statusError } = await supabase
+                    .from('piece_status')
+                    .delete()
+                    .eq('project_id', projectId)
+                    .in('piece_mark', allPieceIds);
+                if (statusError) throw statusError;
+            }
+            
+            // Excluir os grupos
+            const { error: pieceError } = await supabase
+                .from('pieces')
+                .delete()
+                .eq('project_id', projectId)
+                .in('id', groupIds);
+            if (pieceError) throw pieceError;
+            
+            toast.success(`${groupIds.length} grupos excluídos com sucesso.`, { id: toastId });
+            fetchAllData();
+        } catch (error) {
+            toast.error('Falha ao excluir os grupos.', { id: toastId });
+        }
+    };
+
     const handleUpdateProject = async () => {
         if (!projectId) return;
         setIsSaving(true);
@@ -402,7 +443,8 @@ const ProjectDetails = () => {
                                 groupedPieces={filteredGroupedPieces} 
                                 individualPieces={displayedPieces.map(p => ({id: p.id, is_released: p.is_released}))} 
                                 onStatusChange={handleStatusChange} 
-                                onDeleteGroup={handleDeleteGroup} 
+                                onDeleteGroup={handleDeleteGroup}
+                                onDeleteBatch={handleDeleteBatch}
                             />
                         </div>
                     </TabsContent>
