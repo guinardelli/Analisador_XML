@@ -229,10 +229,25 @@ const ProjectDetails = () => {
                 </div>
 
                 <Tabs defaultValue="overview" className="w-full">
-                    <TabsList>
-                        <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-                        <TabsTrigger value="pieces">Lista de Peças</TabsTrigger>
-                        <TabsTrigger value="info">Informações do Projeto</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-3 bg-surface p-1 rounded-lg border border-border-default mb-6">
+                        <TabsTrigger 
+                            value="overview" 
+                            className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-3 font-medium transition-all"
+                        >
+                            Visão Geral
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="pieces" 
+                            className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-3 font-medium transition-all"
+                        >
+                            Lista de Peças
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="info" 
+                            className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-3 font-medium transition-all"
+                        >
+                            Informações do Projeto
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="overview">
@@ -250,8 +265,7 @@ const ProjectDetails = () => {
 
                     <TabsContent value="pieces">
                         <Card className="mt-6">
-                            <CardHeader><CardTitle>Filtros</CardTitle></CardHeader>
-                            <CardContent>
+                            <CardHeader><CardTitle>Filtros</CardTitle></CardHeader><CardContent>
                                 <div className="space-y-4">
                                     <Input type="text" value={filters.name} onChange={e => setFilters(p => ({...p, name: e.target.value}))} placeholder="Buscar por nome..." />
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
