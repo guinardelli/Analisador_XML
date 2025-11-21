@@ -121,31 +121,38 @@ const ProjectDetails = () => {
         return groupedPieces.filter(group => displayedGroupNames.has(group.name));
     }, [groupedPieces, displayedPieces]);
 
-    // Dados para os filtros dependentes - lógica corrigida para filtros interdependentes
+    // Dados para os filtros dependentes - lógica integrada e bidirecional
     const availableOptions = useMemo(() => {
-        // Primeiro, filtra as peças com base nos filtros atuais, exceto o filtro que estamos calculando
+        // Primeiro, filtra as peças apenas pelo nome (filtro independente)
         const filteredByName = allIndividualPieces.filter(piece => 
             filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true
         );
 
-        // Para grupos: filtra por nome e concreto, mas não por grupo ou seção
-        const groupsFiltered = filteredByName.filter(piece => 
-            filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true
-        );
+        // Para cada filtro, calcula as opções disponíveis considerando apenas os outros filtros ativos
+        // Isso garante que os filtros sejam interdependentes e bidirecionais
+
+        // Grupos disponíveis: considera apenas nome e os filtros de seção/concreto se estiverem ativos
+        const groupsFiltered = filteredByName.filter(piece => {
+            const sectionMatch = filters.section.length > 0 ? filters.section.includes(piece.section) : true;
+            const concreteMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
+            return sectionMatch && concreteMatch;
+        });
         const uniqueGroups = [...new Set(groupsFiltered.map(p => p.group))].sort();
 
-        // Para seções: filtra por nome, grupo e concreto
-        const sectionsFiltered = filteredByName.filter(piece => 
-            filters.group.length > 0 ? filters.group.includes(piece.group) : true &&
-            filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true
-        );
+        // Seções disponíveis: considera apenas nome e os filtros de tipo/concreto se estiverem ativos
+        const sectionsFiltered = filteredByName.filter(piece => {
+            const groupMatch = filters.group.length > 0 ? filters.group.includes(piece.group) : true;
+            const concreteMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
+            return groupMatch && concreteMatch;
+        });
         const uniqueSections = [...new Set(sectionsFiltered.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
 
-        // Para concreto: filtra por nome, grupo e seção
-        const concreteFiltered = filteredByName.filter(piece => 
-            filters.group.length > 0 ? filters.group.includes(piece.group) : true &&
-            filters.section.length > 0 ? filters.section.includes(piece.section) : true
-        );
+        // Concretos disponíveis: considera apenas nome e os filtros de tipo/seção se estiverem ativos
+        const concreteFiltered = filteredByName.filter(piece => {
+            const groupMatch = filters.group.length > 0 ? filters.group.includes(piece.group) : true;
+            const sectionMatch = filters.section.length > 0 ? filters.section.includes(piece.section) : true;
+            return groupMatch && sectionMatch;
+        });
         const uniqueConcreteClasses = [...new Set(concreteFiltered.map(p => p.concrete_class))].sort();
         
         return { groups: uniqueGroups, sections: uniqueSections, concreteClasses: uniqueConcreteClasses };
