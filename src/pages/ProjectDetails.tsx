@@ -34,9 +34,9 @@ interface IndividualPiece {
     id: string; name: string; group: string; section: string; length: number; weight: number; unit_volume: number; concrete_class: string; is_released: boolean;
 }
 interface Filters {
-    name: string; group: string[]; section: string[]; concrete_class: string[];
+    name: string; group: string; section: string; concrete_class: string[];
 }
-const initialFilters: Filters = { name: '', group: [], section: [], concrete_class: [] };
+const initialFilters: Filters = { name: '', group: '', section: '', concrete_class: [] };
 
 const ProjectDetails = () => {
     const { projectId } = useParams<{ projectId: string }>();
@@ -106,8 +106,8 @@ const ProjectDetails = () => {
     const displayedPieces = useMemo(() => {
         return allIndividualPieces.filter(piece => {
             const nameMatch = filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
-            const groupMatch = filters.group.length > 0 ? filters.group.includes(piece.group) : true;
-            const sectionMatch = filters.section.length > 0 ? filters.section.includes(piece.section) : true;
+            const groupMatch = filters.group ? piece.group === filters.group : true;
+            const sectionMatch = filters.section ? piece.section === filters.section : true;
             const concreteClassMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
             return nameMatch && groupMatch && sectionMatch && concreteClassMatch;
         });
@@ -118,12 +118,23 @@ const ProjectDetails = () => {
         return groupedPieces.filter(group => displayedGroupNames.has(group.name));
     }, [groupedPieces, displayedPieces]);
 
+    // Dados para os filtros dependentes
     const availableOptions = useMemo(() => {
+        // Primeiro, filtramos as peças com base nos filtros atuais (exceto seção)
+        const filteredPieces = allIndividualPieces.filter(piece => {
+            const nameMatch = filters.name ? piece.name.toLowerCase().includes(filters.name.toLowerCase()) : true;
+            const groupMatch = filters.group ? piece.group === filters.group : true;
+            const concreteClassMatch = filters.concrete_class.length > 0 ? filters.concrete_class.includes(piece.concrete_class) : true;
+            return nameMatch && groupMatch && concreteClassMatch;
+        });
+
+        // Obtemos as opções únicas com base nas peças filtradas
         const uniqueGroups = [...new Set(allIndividualPieces.map(p => p.group))].sort();
-        const uniqueSections = [...new Set(allIndividualPieces.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
+        const uniqueSections = [...new Set(filteredPieces.map(p => p.section))].sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric: true}));
         const uniqueConcreteClasses = [...new Set(allIndividualPieces.map(p => p.concrete_class))].sort();
+        
         return { groups: uniqueGroups, sections: uniqueSections, concreteClasses: uniqueConcreteClasses };
-    }, [allIndividualPieces]);
+    }, [allIndividualPieces, filters]);
 
     const metrics = useMemo(() => {
         const totalPieces = allIndividualPieces.length;
@@ -201,11 +212,16 @@ const ProjectDetails = () => {
         }
     };
 
-    const handleFilterCheckboxChange = (field: 'group' | 'section' | 'concrete_class', value: string) => {
+    const handleFilterChange = (field: keyof Filters, value: string | string[]) => {
         setFilters(prev => {
-            const currentValues = prev[field];
-            const newValues = currentValues.includes(value) ? currentValues.filter(v => v !== value) : [...currentValues, value];
-            return {...prev, [field]: newValues};
+            const newFilters = { ...prev, [field]: value };
+            
+            // Se o filtro de grupo mudar, resetamos o filtro de seção
+            if (field === 'group') {
+                newFilters.section = '';
+            }
+            
+            return newFilters;
         });
     };
 
@@ -267,19 +283,86 @@ const ProjectDetails = () => {
                         <Card className="mt-6">
                             <CardHeader><CardTitle>Filtros</CardTitle></CardHeader><CardContent>
                                 <div className="space-y-4">
-                                    <Input type="text" value={filters.name} onChange={e => setFilters(p => ({...p, name: e.target.value}))} placeholder="Buscar por nome..." />
+                                    <Input 
+                                        type="text" 
+                                        value={filters.name} 
+                                        onChange={e => handleFilterChange('name', e.target.value)} 
+                                        placeholder="Buscar por nome..." 
+                                    />
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        {[{ id: 'group', label: 'Tipo', options: availableOptions.groups, selected: filters.group }, { id: 'section', label: 'Seção', options: availableOptions.sections, selected: filters.section }, { id: 'concrete_class', label: 'Concreto', options: availableOptions.concreteClasses, selected: filters.concrete_class }].map(group => (
-                                            <div key={group.id}><Label className="block mb-1">{group.label} {group.selected.length > 0 && `(${group.selected.length})`}</Label><div className="h-32 overflow-y-auto p-2 border rounded-lg space-y-1">{group.options.map(opt => (<label key={opt} className="flex items-center space-x-2 text-sm cursor-pointer"><input type="checkbox" checked={group.selected.includes(opt)} onChange={() => handleFilterCheckboxChange(group.id as any, opt)} /><span>{opt}</span></label>))}</div></div>
-                                        ))}
+                                        <div>
+                                            <Label className="block mb-1">Tipo</Label>
+                                            <select
+                                                value={filters.group}
+                                                onChange={e => handleFilterChange('group', e.target.value)}
+                                                className="w-full bg-surface border border-border-default rounded-md p-2 text-sm"
+                                            >
+                                                <option value="">Todos os tipos</option>
+                                                {availableOptions.groups.map(group => (
+                                                    <option key={group} value={group}>{group}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        
+                                        <div>
+                                            <Label className="block mb-1">Seção</Label>
+                                            <select
+                                                value={filters.section}
+                                                onChange={e => handleFilterChange('section', e.target.value)}
+                                                className="w-full bg-surface border border-border-default rounded-md p-2 text-sm"
+                                                disabled={!filters.group} // Desabilita se nenhum grupo estiver selecionado
+                                            >
+                                                <option value="">Todas as seções</option>
+                                                {availableOptions.sections.map(section => (
+                                                    <option key={section} value={section}>{section}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        
+                                        <div>
+                                            <Label className="block mb-1">
+                                                Concreto {filters.concrete_class.length > 0 && `(${filters.concrete_class.length})`}
+                                            </Label>
+                                            <div className="h-32 overflow-y-auto p-2 border rounded-lg space-y-1">
+                                                {availableOptions.concreteClasses.map(concreteClass => (
+                                                    <label key={concreteClass} className="flex items-center space-x-2 text-sm cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={filters.concrete_class.includes(concreteClass)}
+                                                            onChange={e => {
+                                                                const newConcreteClasses = e.target.checked
+                                                                    ? [...filters.concrete_class, concreteClass]
+                                                                    : filters.concrete_class.filter(c => c !== concreteClass);
+                                                                handleFilterChange('concrete_class', newConcreteClasses);
+                                                            }}
+                                                        />
+                                                        <span>{concreteClass || 'Não especificado'}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-end"><Button onClick={() => setFilters(initialFilters)} variant="outline">Limpar Filtros</Button></div>
+                                    <div className="flex justify-end">
+                                        <Button 
+                                            onClick={() => setFilters(initialFilters)} 
+                                            variant="outline"
+                                        >
+                                            Limpar Filtros
+                                        </Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
                         <div className="mt-6">
-                            <p className="text-sm text-text-subtle mb-4">Exibindo {displayedPieces.length} de {allIndividualPieces.length} peças.</p>
-                            <PiecesList groupedPieces={filteredGroupedPieces} individualPieces={displayedPieces.map(p => ({id: p.id, is_released: p.is_released}))} onStatusChange={handleStatusChange} onDeleteGroup={handleDeleteGroup} />
+                            <p className="text-sm text-text-subtle mb-4">
+                                Exibindo {displayedPieces.length} de {allIndividualPieces.length} peças.
+                            </p>
+                            <PiecesList 
+                                groupedPieces={filteredGroupedPieces} 
+                                individualPieces={displayedPieces.map(p => ({id: p.id, is_released: p.is_released}))} 
+                                onStatusChange={handleStatusChange} 
+                                onDeleteGroup={handleDeleteGroup} 
+                            />
                         </div>
                     </TabsContent>
 
@@ -292,27 +375,113 @@ const ProjectDetails = () => {
                                         <CardDescription>Visualize ou edite os detalhes cadastrais do projeto.</CardDescription>
                                     </div>
                                     {!isEditing ? (
-                                        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}><Edit className="h-4 w-4 mr-2" />Editar</Button>
+                                        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                                            <Edit className="h-4 w-4 mr-2" />Editar
+                                        </Button>
                                     ) : (
                                         <div className="flex gap-2">
-                                            <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setEditableProject(project); }} disabled={isSaving}><X className="h-4 w-4 mr-2" />Cancelar</Button>
-                                            <Button size="sm" onClick={handleUpdateProject} disabled={isSaving}><Save className="h-4 w-4 mr-2" />{isSaving ? 'Salvando...' : 'Salvar'}</Button>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                onClick={() => { 
+                                                    setIsEditing(false); 
+                                                    setEditableProject(project); 
+                                                }} 
+                                                disabled={isSaving}
+                                            >
+                                                <X className="h-4 w-4 mr-2" />Cancelar
+                                            </Button>
+                                            <Button 
+                                                size="sm" 
+                                                onClick={handleUpdateProject} 
+                                                disabled={isSaving}
+                                            >
+                                                <Save className="h-4 w-4 mr-2" />
+                                                {isSaving ? 'Salvando...' : 'Salvar'}
+                                            </Button>
                                         </div>
                                     )}
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-6 pt-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <div className="space-y-2"><Label>Cliente</Label><Input value={isEditing ? editableProject.client || '' : project.client || ''} name="client" onChange={e => setEditableProject(p => ({...p, client: e.target.value}))} readOnly={!isEditing} /></div>
-                                    <div className="space-y-2"><Label>Status</Label><Input value={isEditing ? editableProject.status || '' : project.status || ''} name="status" onChange={e => setEditableProject(p => ({...p, status: e.target.value}))} readOnly={!isEditing} /></div>
-                                    <div className="space-y-2"><Label>Nº ART</Label><Input value={isEditing ? editableProject.art_number || '' : project.art_number || ''} name="art_number" onChange={e => setEditableProject(p => ({...p, art_number: e.target.value}))} readOnly={!isEditing} /></div>
+                                    <div className="space-y-2">
+                                        <Label>Cliente</Label>
+                                        <Input 
+                                            value={isEditing ? editableProject.client || '' : project.client || ''} 
+                                            name="client" 
+                                            onChange={e => setEditableProject(p => ({...p, client: e.target.value}))} 
+                                            readOnly={!isEditing} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Status</Label>
+                                        <Input 
+                                            value={isEditing ? editableProject.status || '' : project.status || ''} 
+                                            name="status" 
+                                            onChange={e => setEditableProject(p => ({...p, status: e.target.value}))} 
+                                            readOnly={!isEditing} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Nº ART</Label>
+                                        <Input 
+                                            value={isEditing ? editableProject.art_number || '' : project.art_number || ''} 
+                                            name="art_number" 
+                                            onChange={e => setEditableProject(p => ({...p, art_number: e.target.value}))} 
+                                            readOnly={!isEditing} 
+                                        />
+                                    </div>
                                 </div>
-                                <div className="space-y-2"><Label>Endereço</Label><Input value={isEditing ? editableProject.address || '' : project.address || ''} name="address" onChange={e => setEditableProject(p => ({...p, address: e.target.value}))} readOnly={!isEditing} /></div>
-                                <div className="space-y-2"><Label>Descrição</Label><Input value={isEditing ? editableProject.description || '' : project.description || ''} name="description" onChange={e => setEditableProject(p => ({...p, description: e.target.value}))} readOnly={!isEditing} /></div>
+                                <div className="space-y-2">
+                                    <Label>Endereço</Label>
+                                    <Input 
+                                        value={isEditing ? editableProject.address || '' : project.address || ''} 
+                                        name="address" 
+                                        onChange={e => setEditableProject(p => ({...p, address: e.target.value}))} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Descrição</Label>
+                                    <Input 
+                                        value={isEditing ? editableProject.description || '' : project.description || ''} 
+                                        name="description" 
+                                        onChange={e => setEditableProject(p => ({...p, description: e.target.value}))} 
+                                        readOnly={!isEditing} 
+                                    />
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <div className="space-y-2"><Label>Área (m²)</Label><Input type="number" value={isEditing ? editableProject.area || '' : project.area || ''} name="area" onChange={e => setEditableProject(p => ({...p, area: e.target.valueAsNumber}))} readOnly={!isEditing} /></div>
-                                    <div className="space-y-2"><Label>Data de Início</Label><Input type="date" value={isEditing ? (editableProject.start_date || '').split('T')[0] : (project.start_date || '').split('T')[0]} name="start_date" onChange={e => setEditableProject(p => ({...p, start_date: e.target.value}))} readOnly={!isEditing} /></div>
-                                    <div className="space-y-2"><Label>Data de Término</Label><Input type="date" value={isEditing ? (editableProject.end_date || '').split('T')[0] : (project.end_date || '').split('T')[0]} name="end_date" onChange={e => setEditableProject(p => ({...p, end_date: e.target.value}))} readOnly={!isEditing} /></div>
+                                    <div className="space-y-2">
+                                        <Label>Área (m²)</Label>
+                                        <Input 
+                                            type="number" 
+                                            value={isEditing ? editableProject.area || '' : project.area || ''} 
+                                            name="area" 
+                                            onChange={e => setEditableProject(p => ({...p, area: e.target.valueAsNumber}))} 
+                                            readOnly={!isEditing} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Data de Início</Label>
+                                        <Input 
+                                            type="date" 
+                                            value={isEditing ? (editableProject.start_date || '').split('T')[0] : (project.start_date || '').split('T')[0]} 
+                                            name="start_date" 
+                                            onChange={e => setEditableProject(p => ({...p, start_date: e.target.value}))} 
+                                            readOnly={!isEditing} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Data de Término</Label>
+                                        <Input 
+                                            type="date" 
+                                            value={isEditing ? (editableProject.end_date || '').split('T')[0] : (project.end_date || '').split('T')[0]} 
+                                            name="end_date" 
+                                            onChange={e => setEditableProject(p => ({...p, end_date: e.target.value}))} 
+                                            readOnly={!isEditing} 
+                                        />
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
